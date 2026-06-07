@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco Guardians</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            background-color: #0c0f12; color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; overflow: hidden;
+        }
+        #lang-selector { position: absolute; top: 15px; right: 15px; z-index: 100; }
+        .btn-lang { background: #2c353d; color: #fff; border: 1px solid #555; padding: 6px 12px; font-size: 0.9rem; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .btn-lang:hover { background: #4caf50; border-color: #4caf50; }
+
+        #login-page {
+            display: flex; flex-direction: column; align-items: center;
+            background: #161a1e; padding: 40px; border-radius: 12px; border: 2px solid #2c353d;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5); width: 100%; max-width: 420px; text-align: center; box-sizing: border-box;
+        }
+        h1 { color: #4caf50; font-size: 2.3rem; margin: 0 0 5px 0; }
+        .sub-title { font-size: 0.95rem; color: #888; margin-bottom: 30px; letter-spacing: 1px; }
+        
+        .form-group { width: 100%; text-align: left; margin-bottom: 25px; }
+        .form-group label { display: block; font-size: 0.9rem; color: #aaa; margin-bottom: 8px; font-weight: bold; }
+        input { padding: 14px; font-size: 1.2rem; width: 100%; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; text-align: center; }
+        
+        .btn-game { background-color: #4caf50; color: #fff; border: none; padding: 16px 0; width: 100%; font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.2s; box-shadow: 0 4px 15px rgba(76,175,80,0.3); }
+        .btn-game:hover { background-color: #45a049; transform: scale(1.02); }
+
+        #game-interface { display: none; flex-direction: row; gap: 20px; align-items: flex-start; }
+        #game-container { position: relative; border: 4px solid #2c353d; border-radius: 8px; }
+        canvas { background-color: #050709; display: block; }
+        
+        #death-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(12, 15, 18, 0.95); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; display: none; z-index: 10;
+        }
+        .death-title { color: #e74c3c; font-size: 3rem; margin-bottom: 10px; font-weight: bold; }
+        .btn-action { padding: 12px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin: 10px; border: none; color: #fff; transition: 0.2s; }
+        .btn-respawn { background-color: #2ecc71; }
+        .btn-menu { background-color: #7f8c8d; }
+
+        #skill-bar { position: absolute; top: 10px; left: 10px; padding: 8px 15px; border-radius: 5px; font-weight: bold; font-size: 0.9rem; display: none; background: rgba(0,0,0,0.8); border: 1px solid #fff; }
+
+        #sidebar { background: #161a1e; width: 220px; padding: 20px; border-radius: 8px; border: 1px solid #2c353d; height: 568px; display: flex; flex-direction: column; box-sizing: border-box; }
+        #player-count-indicator { background: rgba(76, 175, 80, 0.1); border: 1px solid #4caf50; color: #4caf50; padding: 10px; text-align: center; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-bottom: 20px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; border-bottom: 1px dashed #222; }
+        
+        #status-indicator { position: absolute; top: 15px; left: 15px; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; background: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="lang-selector">
+        <button class="btn-lang" onclick="switchLanguage('zh')">中文 🇨🇳</button>
+        <button class="btn-lang" onclick="switchLanguage('en')">English 🇺🇸</button>
+    </div>
+
+    <div id="status-indicator">📡 Connecting...</div>
+
+    <div id="login-page">
+        <h1 id="ui-title">地球守护者</h1>
+        <div class="sub-title" id="ui-subtitle">[⚡雷电掉落食物版]</div>
+        <div class="form-group">
+            <label id="ui-label-name">输入你的守护神代号</label>
+            <input type="text" id="username-input" placeholder="Name" maxlength="8">
+        </div>
+        <button class="btn-game" id="ui-btn-join" onclick="autoMatchmaking()">进入战场 / PLAY</button>
+    </div>
+
+    <div id="game-interface">
+        <div id="game-container">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            <div id="skill-bar">ACTIVE SKILL: NONE</div>
+            <div id="death-overlay">
+                <div class="death-title" id="ui-death-title">你牺牲了！</div>
+                <p style="font-size: 1.2rem; color: #aaa; margin-bottom: 20px;" id="ui-death-score">最终净化积分: 0</p>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-action btn-respawn" id="ui-btn-respawn" onclick="respawnPlayer()">重新复活 / Play</button>
+                    <button class="btn-action btn-menu" id="ui-btn-menu" onclick="quitToMenu()">返回菜单 / Menu</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="sidebar">
+            <div id="player-count-indicator">👥 在线: 1 / 20</div>
+            <h3 style="margin:0; text-align:center;" id="ui-board-title">🏆 本场英雄榜</h3>
+            <div id="rank-list" style="overflow-y: auto; flex-grow: 1; margin: 10px 0;"></div>
+            <div style="font-size:0.75rem; color:#aaa; line-height:1.4;" id="ui-controls">
+                移动: WASD / 方向键<br>
+                ⚡雷状态：超速且磁吸，并在身后不断掉落食物！
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLang = "zh"; 
+        const TRANSLATIONS = {
+            zh: {
+                connecting: "📡 正在连接云端骨干网...", connected: "🟢 成功接入云端网络集群",
+                title: "🌍 地球守护者", subtitle: "[⚡雷电加速 · 多人竞技战场]",
+                labelName: "输入你的守护神代号:",
+                btnJoin: "开始匹配并登入战场",
+                boardTitle: "🏆 本场英雄榜",
+                controls: "操作：WASD 或 方向键<br>⚡雷状态：超速且磁吸，并在身后不断<b>掉落食物</b>！快去抢占高分排位！",
+                emptyWorld: "战场目前空无一人...", pts: "分",
+                alertWait: "正在建立 network 通道，请稍后...",
+                deathTitle: "💀 你牺牲了！", deathScore: "最终积分: ",
+                btnRespawn: "🔄 重新复活 (Play)", btnMenu: "🏠 返回菜单 (Menu)"
+            },
+            en: {
+                connecting: "📡 Connecting to Grid...", connected: "🟢 Connected to Cloud Matrix",
+                title: "🌍 Eco Guardians", subtitle: "[⚡Thunder Rush · Multiplayer Grid]",
+                labelName: "Enter Codename:",
+                btnJoin: "FIND MATCH & PLAY",
+                boardTitle: "🏆 Leaderboard",
+                controls: "Move: WASD / Arrows<br>⚡ Thunder Mode: Hyper speed & magnet. Drops a <b>food trail</b>! Outsmart other survivors!",
+                emptyWorld: "Battlefield is empty...", pts: "pts",
+                alertWait: "Connecting to server grid, please wait...",
+                deathTitle: "💀 YOU ARE DEAD!", deathScore: "Final Score: ",
+                btnRespawn: "🔄 Respawn / Play", btnMenu: "🏠 Back to Menu"
+            }
+        };
+
+        const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+        let selectedServer = 1; 
+        let TOPIC_PRESENCE = ""; let TOPIC_GEMS = "";
+        
+        let myId = "player_" + Math.random().toString(36).substring(2, 9);
+        let myName = "";
+        let baseColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+        let amIConnected = false; let isDead = false; let loopInterval = null; let aiInterval = null;
+
+        let globalPlayers = {}; let globalGems = [];
+        let mySnake = { body: [], dx: 1, dy: 0, score: 0 };
+        
+        // 🤫 Hidden bot configurations (Fake human player names)
+        let serverBots = [
+            { id: "bot_sparky", name: "Sparky_Gx", color: "#9b59b6", body: [], dx: 1, dy: 0, score: 30, isDead: false },
+            { id: "bot_shadow", name: "ShadowHunter", color: "#7f8c8d", body: [], dx: 0, dy: 1, score: 40, isDead: false },
+            { id: "bot_hunter", name: "Alpha_Player", color: "#c0392b", body: [], dx: -1, dy: 0, score: 20, isDead: false },
+            { id: "bot_blazer", name: "Blazer99", color: "#d35400", body: [], dx: 0, dy: -1, score: 50, isDead: false },
+            { id: "bot_ecobot", name: "Eco_Surv", color: "#1abc9c", body: [], dx: 1, dy: 0, score: 10, isDead: false }
+        ];
+        
+        let activeBuff = "none"; let buffTimer = 0; let fireBullets = []; let thunderDropCounter = 0;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d"); 
+        const GRID_SIZE = 40; const CELL = canvas.width / GRID_SIZE;
+
+        client.on('connect', () => { amIConnected = true; document.getElementById("status-indicator").style.backgroundColor = "#4caf50"; updateLanguageUI(); });
+        client.on('message', (topic, message) => {
+            try {
+                let data = JSON.parse(message.toString());
+                if (topic.startsWith(TOPIC_PRESENCE)) {
+                    let pid = topic.replace(TOPIC_PRESENCE, "");
+                    if (data.action === "quit") { delete globalPlayers[pid]; } else { globalPlayers[pid] = data; }
+                    updateLeaderboard(); updatePlayerCountDisplay();
+                }
+                if (topic === TOPIC_GEMS) { if(data.gems && data.gems.length > 0) globalGems = data.gems; }
+            } catch(e){}
+        });
+
+        function updateLanguageUI() {
+            const t = TRANSLATIONS[currentLang];
+            document.getElementById("status-indicator").innerText = amIConnected ? t.connected : t.connecting;
+            document.getElementById("ui-title").innerText = t.title; document.getElementById("ui-subtitle").innerText = t.subtitle;
+            document.getElementById("ui-label-name").innerText = t.labelName; document.getElementById("ui-btn-join").innerText = t.btnJoin;
+            document.getElementById("ui-board-title").innerText = t.boardTitle; document.getElementById("ui-controls").innerHTML = t.controls;
+            document.getElementById("ui-death-title").innerText = t.deathTitle; document.getElementById("ui-btn-respawn").innerText = t.btnRespawn;
+            document.getElementById("ui-btn-menu").innerText = t.btnMenu; updateLeaderboard();
+        }
+
+        function switchLanguage(lang) { currentLang = lang; updateLanguageUI(); }
+
+        function autoMatchmaking() {
+            if(!amIConnected) return alert(TRANSLATIONS[currentLang].alertWait);
+            selectedServer = Math.floor(Math.random() * 10000) + 1;
+            TOPIC_PRESENCE = `ecoguardians/sv${selectedServer}/presence/`;
+            TOPIC_GEMS = `ecoguardians/sv${selectedServer}/gems`;
+            globalPlayers = {};
+            client.subscribe(TOPIC_PRESENCE + "+");
+            setTimeout(() => { executeJoin(); }, 300); 
+        }
+
+        function executeJoin() {
+            client.subscribe(TOPIC_GEMS);
+            myName = document.getElementById("username-input").value.trim() || "Guardian";
+            document.getElementById("login-page").style.display = "none";
+            document.getElementById("game-interface").style.display = "flex";
+            document.getElementById("death-overlay").style.display = "none";
+            
+            isDead = false; mySnake.score = 0; activeBuff = "none"; buffTimer = 0; fireBullets = []; thunderDropCounter = 0;
+            resetMySnakePosition();
+            serverBots.forEach((bot, idx) => spawnBot(bot, idx));
+
+            generateGlobalGems(); 
+            startDynamicEngine(); startBotAIThinking();
+        }
+
+        function startDynamicEngine() {
+            if(loopInterval) clearInterval(loopInterval);
+            let speed = 130;
+            if(activeBuff === "ice") speed = 220;      
+            if(activeBuff === "thunder") speed = 50;  
+            loopInterval = setInterval(gameHeartbeat, speed);
+        }
+
+        function resetMySnakePosition() {
+            let startX = Math.floor(Math.random() * 20) + 10;
+            let startY = Math.floor(Math.random() * 20) + 10;
+            mySnake.body = [{x: startX, y: startY}, {x: startX - 1, y: startY}];
+            mySnake.dx = 1; mySnake.dy = 0;
+        }
+
+        function spawnBot(bot, idx) {
+            bot.isDead = false;
+            let bx = Math.floor(Math.random() * 30) + 5;
+            let by = Math.floor(Math.random() * 30) + 5;
+            bot.body = [{x: bx, y: by}, {x: bx-1, y: by}];
+            bot.dx = idx % 2 === 0 ? 1 : -1; bot.dy = idx % 2 === 0 ? 0 : 1;
+        }
+
+        function startBotAIThinking() {
+            if (aiInterval) clearInterval(aiInterval);
+            aiInterval = setInterval(() => {
+                serverBots.forEach(bot => {
+                    if (bot.isDead || globalGems.length === 0) return;
+                    let head = bot.body[0];
+                    let targetGem = null; let minDist = 9999;
+                    globalGems.forEach(gem => {
+                        if (gem.type !== '🧱') {
+                            let d = Math.abs(gem.x - head.x) + Math.abs(gem.y - head.y);
+                            if (d < minDist) { minDist = d; targetGem = gem; }
+                        }
+                    });
+                    if (targetGem) {
+                        let desiredDx = 0; let desiredDy = 0;
+                        if (targetGem.x > head.x) desiredDx = 1;
+                        else if (targetGem.x < head.x) desiredDx = -1;
+                        else if (targetGem.y > head.y) desiredDy = 1;
+                        else if (targetGem.y < head.y) desiredDy = -1;
+
+                        let nextX = head.x + desiredDx; let nextY = head.y + desiredDy;
+                        let hitObstacle = globalGems.some(g => g.type === '🧱' && g.x === nextX && g.y === nextY);
+                        if (!hitObstacle) {
+                            if (desiredDx !== 0 && bot.dx === 0) { bot.dx = desiredDx; bot.dy = 0; }
+                            else if (desiredDy !== 0 && bot.dy === 0) { bot.dx = 0; bot.dy = desiredDy; }
+                        } else {
+                            if (bot.dx !== 0) { bot.dx = 0; bot.dy = Math.random() > 0.5 ? 1 : -1; }
+                            else { bot.dy = 0; bot.dx = Math.random() > 0.5 ? 1 : -1; }
+                        }
+                    }
+                });
+            }, 260);
+        }
+
+        function gameHeartbeat() {
+            if (isDead) return;
+
+            if(buffTimer > 0) {
+                buffTimer -= (activeBuff === "thunder" ? 0.05 : 0.13); 
+                document.getElementById("skill-bar").style.display = "block";
+                document.getElementById("skill-bar").innerText = `⚡ 异能状态: ${activeBuff.toUpperCase()} (${Math.ceil(buffTimer)}s)`;
+                if(buffTimer <= 0) { activeBuff = "none"; document.getElementById("skill-bar").style.display = "none"; startDynamicEngine(); }
+            }
+
+            if(activeBuff === "thunder") {
+                let head = mySnake.body[0];
+                globalGems.forEach((gem) => {
+                    if(gem.type !== '🧱' && Math.abs(gem.x - head.x) <= 4 && Math.abs(gem.y - head.y) <= 4) { gem.x = head.x; gem.y = head.y; }
+                });
+                thunderDropCounter++;
+                if(thunderDropCounter % 2 === 0) { 
+                    let tailPart = mySnake.body[mySnake.body.length - 1] || head;
+                    globalGems.push({ x: tailPart.x, y: tailPart.y, type: Math.random() > 0.5 ? '🍏' : '🍒' });
+                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); 
+                }
+            }
+
+            fireBullets.forEach((b, idx) => {
+                b.x += b.dx; b.y += b.dy;
+                globalGems.forEach((gem, gIdx) => {
+                    if(gem.type === '🧱' && Math.abs(gem.x - b.x) <= 1 && Math.abs(gem.y - b.y) <= 1) { globalGems.splice(gIdx, 1); fireBullets.splice(idx, 1); client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); }
+                });
+                if(b.x < 0 || b.x >= GRID_SIZE || b.y < 0 || b.y >= GRID_SIZE) fireBullets.splice(idx, 1);
+            });
+
+            // Handle hidden bots
+            serverBots.forEach((bot, idx) => {
+                if (bot.isDead) return;
+                let bHead = { x: bot.body[0].x + bot.dx, y: bot.body[0].y + bot.dy };
+                if(bHead.x < 0) bHead.x = GRID_SIZE - 1; if(bHead.x >= GRID_SIZE) bHead.x = 0;
+                if(bHead.y < 0) bHead.y = GRID_SIZE - 1; if(bHead.y >= GRID_SIZE) bHead.y = 0;
+
+                let botCrashed = false;
+                mySnake.body.forEach(p => { if(bHead.x === p.x && bHead.y === p.y) botCrashed = true; });
+                for(let i=1; i<bot.body.length; i++) { if(bHead.x === bot.body[i].x && bHead.y === bot.body[i].y) botCrashed = true; }
+                
+                if (botCrashed) {
+                    bot.isDead = true; setTimeout(() => spawnBot(bot, idx), 4000);
+                } else {
+                    bot.body.unshift(bHead); let botAte = false;
+                    for(let i = globalGems.length - 1; i >= 0; i--) {
+                        if(bHead.x === globalGems[i].x && bHead.y === globalGems[i].y) {
+                            if(globalGems[i].type === '🧱') { bot.isDead = true; setTimeout(() => spawnBot(bot, idx), 4000); break; }
+                            botAte = true; bot.score += 10; globalGems.splice(i, 1);
+                            globalGems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: ['🍏', '🍒', '🧱'][Math.floor(Math.random()*3)] });
+                            client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); break;
+                        }
+                    }
+                    if (!botAte) bot.body.pop();
+                }
+            });
+
+            const head = { x: mySnake.body[0].x + mySnake.dx, y: mySnake.body[0].y + mySnake.dy };
+            if(head.x < 0) head.x = GRID_SIZE - 1; if(head.x >= GRID_SIZE) head.x = 0;
+            if(head.y < 0) head.y = GRID_SIZE - 1; if(head.y >= GRID_SIZE) head.y = 0;
+
+            if (checkCollision(head)) { triggerDeathMenu(); return; }
+            mySnake.body.unshift(head);
+
+            let ate = false;
+            for(let i = globalGems.length - 1; i >= 0; i--) {
+                let gem = globalGems[i];
+                if(head.x === gem.x && head.y === gem.y) {
+                    if(gem.type === '🧱') { triggerDeathMenu(); return; } 
+                    ate = true; 
+                    if(gem.type === '🔥') { activeBuff = "fire"; buffTimer = 5; startDynamicEngine(); }
+                    else if(gem.type === '❄️') { activeBuff = "ice"; buffTimer = 7; startDynamicEngine(); }
+                    else if(gem.type === '⚡') { activeBuff = "thunder"; buffTimer = 4; thunderDropCounter = 0; startDynamicEngine(); }
+                    else { mySnake.score += 10; }
+
+                    globalGems.splice(i, 1);
+                    let types = ['🍏', '🍒', '🔥', '❄️', '⚡', '🧱'];
+                    globalGems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: types[Math.floor(Math.random()*types.length)] });
+                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); break;
+                }
+            }
+            if (!ate) { mySnake.body.pop(); }
+
+            let currentDisplayColor = baseColor;
+            if(activeBuff === "fire") currentDisplayColor = "#e74c3c";
+            if(activeBuff === "ice") currentDisplayColor = "#3498db";
+            if(activeBuff === "thunder") currentDisplayColor = "#f1c40f";
+
+            client.publish(TOPIC_PRESENCE + myId, JSON.stringify({ name: myName, color: currentDisplayColor, body: mySnake.body, score: mySnake.score }), { qos: 0 });
+            serverBots.forEach(bot => {
+                if(!bot.isDead) client.publish(TOPIC_PRESENCE + bot.id, JSON.stringify({ name: bot.name, color: bot.color, body: bot.body, score: bot.score }), { qos: 0 });
+            });
+
+            drawWorld();
+        }
+
+        function checkCollision(head) {
+            for(let i = 1; i < mySnake.body.length; i++) { if(head.x === mySnake.body[i].x && head.y === mySnake.body[i].y) return true; }
+            for(let bot of serverBots) {
+                if(!bot.isDead) { for(let part of bot.body) { if(head.x === part.x && head.y === part.y) return true; } }
+            }
+            for(let pid in globalPlayers) {
+                if(pid === myId || serverBots.some(b => b.id === pid)) continue;
+                let pBody = globalPlayers[pid].body || [];
+                for(let part of pBody) { if(head.x === part.x && head.y === part.y) return true; }
+            }
+            return false;
+        }
+
+        function triggerDeathMenu() {
+            isDead = true; document.getElementById("ui-death-score").innerText = TRANSLATIONS[currentLang].deathScore + mySnake.score;
+            document.getElementById("death-overlay").style.display = "flex"; client.publish(TOPIC_PRESENCE + myId, JSON.stringify({ action: "quit" }), { qos: 0 });
+        }
+
+        function respawnPlayer() {
+            mySnake.score = 0; isDead = false; activeBuff = "none"; buffTimer = 0; fireBullets = [];
+            document.getElementById("death-overlay").style.display = "none"; document.getElementById("skill-bar").style.display = "none";
+            resetMySnakePosition(); startDynamicEngine(); generateGlobalGems();
+        }
+
+        function quitToMenu() {
+            if(loopInterval) clearInterval(loopInterval); if(aiInterval) clearInterval(aiInterval);
+            client.publish(TOPIC_PRESENCE + myId, JSON.stringify({ action: "quit" }), { qos: 0 });
+            serverBots.forEach(bot => client.publish(TOPIC_PRESENCE + bot.id, JSON.stringify({ action: "quit" }), { qos: 0 }));
+            document.getElementById("game-interface").style.display = "none"; document.getElementById("login-page").style.display = "flex";
+        }
+
+        function generateGlobalGems() {
+            let gems = []; let types = ['🍏', '🍒', '🔥', '❄️', '⚡', '🧱']; 
+            for(let i=0; i<40; i++) { 
+                gems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: types[Math.floor(Math.random()*types.length)] });
+            }
+            globalGems = gems; client.publish(TOPIC_GEMS, JSON.stringify({ gems: gems }), { qos: 0 });
+        }
+
+        function drawWorld() {
+            ctx.fillStyle = "#050709";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = "#161a1e";
+            for(let i=0; i<GRID_SIZE; i++) {
+                ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, canvas.width); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(canvas.width, i*CELL); ctx.stroke(); 
+            }
+            
+            if (globalGems) {
+                globalGems.forEach(gem => { ctx.font = `${CELL}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(gem.type, gem.x*CELL + CELL/2, gem.y*CELL + CELL/2); });
+            }
+            
+            fireBullets.forEach(b => { ctx.fillStyle = "#ff5722"; ctx.beginPath(); ctx.arc(b.x*CELL + CELL/2, b.y*CELL + CELL/2, CELL/3, 0, Math.PI*2); ctx.fill(); });
+            
+            for(let pid in globalPlayers) {
+                let p = globalPlayers[pid]; let pBody = p.body || [];
+                pBody.forEach((part, idx) => { ctx.fillStyle = idx === 0 ? "#ffffff" : p.color; ctx.fillRect(part.x*CELL+1, part.y*CELL+1, CELL-2, CELL-2); });
+            }
+            
+            if(!isDead && mySnake.body && mySnake.body.length > 0) {
+                let currentDisplayColor = baseColor;
+                if(activeBuff === "fire") currentDisplayColor = "#e74c3c"; if(activeBuff === "ice") currentDisplayColor = "#3498db"; if(activeBuff === "thunder") currentDisplayColor = "#f1c40f";
+                mySnake.body.forEach((part, idx) => { ctx.fillStyle = idx === 0 ? "#ffffff" : currentDisplayColor; ctx.fillRect(part.x*CELL+1, part.y*CELL+1, CELL-2, CELL-2); });
+            }
+        }
+
+        function updatePlayerCountDisplay() {
+            let total = Object.keys(globalPlayers).length; if(!isDead && !globalPlayers[myId]) total += 1;
+            document.getElementById("player-count-indicator").innerText = currentLang === "zh" ? `👥 在线玩家: ${total} / 20` : `👥 Active: ${total} / 20`;
+        }
+
+        function updateLeaderboard() {
+            let list = []; for(let pid in globalPlayers) { list.push(globalPlayers[pid]); }
+            if (!isDead) { list.push({ name: myName, color: baseColor, score: mySnake.score }); }
+            list.sort((a, b) => b.score - a.score);
+            let uniqueList = []; let namesSeen = new Set();
+            for(let p of list){ if(!namesSeen.has(p.name)){ namesSeen.add(p.name); uniqueList.push(p); } }
+            let html = "";
+            uniqueList.slice(0, 10).forEach((p, idx) => { html += `<div class="rank-item" style="color:${p.color}"><span>${idx+1}. ${p.name}</span><b>${p.score}${TRANSLATIONS[currentLang].pts}</b></div>`; });
+            document.getElementById("rank-list").innerHTML = html || `<div style="color:#666;text-align:center;">${TRANSLATIONS[currentLang].emptyWorld}</div>`;
+        }
+
+        window.addEventListener("keydown", e => {
+            if(isDead) return; const key = e.key.toLowerCase();
+            if(e.key === " " || e.code === "Space") { if(activeBuff === "fire") { let head = mySnake.body[0]; fireBullets.push({ x: head.x, y: head.y, dx: mySnake.dx * 2, dy: mySnake.dy * 2 }); } e.preventDefault(); return; }
+            if((key==='w' || e.key==='ArrowUp') && mySnake.dy===0) { mySnake.dx=0; mySnake.dy=-1; }
+            if((key==='s' || e.key==='ArrowDown') && mySnake.dy===0) { mySnake.dx=0; mySnake.dy=1; }
+            if((key==='a' || e.key==='ArrowLeft') && mySnake.dx===0) { mySnake.dx=-1; mySnake.dy=0; }
+            if((key==='d' || e.key==='ArrowRight') && mySnake.dx===0) { mySnake.dx=1; mySnake.dy=0; }
+        });
+        updateLanguageUI();
+    </script>
+</body>
+</html>
