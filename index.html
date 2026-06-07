@@ -65,7 +65,7 @@
 
     <div id="login-page">
         <h1 id="ui-title">地球守护者</h1>
-        <div class="sub-title" id="ui-subtitle">[⚡雷电掉落食物版]</div>
+        <div class="sub-title" id="ui-subtitle">[金苹果限定版 · 多人竞技战场]</div>
         <div class="form-group">
             <label id="ui-label-name">输入你的守护神代号</label>
             <input type="text" id="username-input" placeholder="Name" maxlength="8">
@@ -93,7 +93,7 @@
             <div id="rank-list" style="overflow-y: auto; flex-grow: 1; margin: 10px 0;"></div>
             <div style="font-size:0.75rem; color:#aaa; line-height:1.4;" id="ui-controls">
                 移动: WASD / 方向键<br>
-                ⚡雷状态：超速且磁吸，并在身后不断掉落食物！
+                寻宝：注意！1% 概率在地图刷新超稀有金苹果，吃掉会获得强力加分！
             </div>
         </div>
     </div>
@@ -103,11 +103,11 @@
         const TRANSLATIONS = {
             zh: {
                 connecting: "📡 正在连接云端骨干网...", connected: "🟢 成功接入云端网络集群",
-                title: "🌍 地球守护者", subtitle: "[⚡雷电加速 · 多人竞技战场]",
+                title: "🌍 地球守护者", subtitle: "[金苹果限定版 · 多人竞技战场]",
                 labelName: "输入你的守护神代号:",
                 btnJoin: "开始匹配并登入战场",
                 boardTitle: "🏆 本场英雄榜",
-                controls: "操作：WASD 或 方向键<br>⚡雷状态：超速且磁吸，并在身后不断<b>掉落食物</b>！快去抢占高分排位！",
+                controls: "操作：WASD 或 方向键<br>寻宝：1% 几率刷新珍贵金苹果，抢到就赚大发了！",
                 emptyWorld: "战场目前空无一人...", pts: "分",
                 alertWait: "正在建立 network 通道，请稍后...",
                 deathTitle: "💀 你牺牲了！", deathScore: "最终积分: ",
@@ -115,11 +115,11 @@
             },
             en: {
                 connecting: "📡 Connecting to Grid...", connected: "🟢 Connected to Cloud Matrix",
-                title: "🌍 Eco Guardians", subtitle: "[⚡Thunder Rush · Multiplayer Grid]",
+                title: "🌍 Eco Guardians", subtitle: "[Golden Apple Edition · Multiplayer]",
                 labelName: "Enter Codename:",
                 btnJoin: "FIND MATCH & PLAY",
                 boardTitle: "🏆 Leaderboard",
-                controls: "Move: WASD / Arrows<br>⚡ Thunder Mode: Hyper speed & magnet. Drops a <b>food trail</b>! Outsmart other survivors!",
+                controls: "Move: WASD / Arrows<br>Event: 1% Chance for a Golden Apple to spawn! Grab it for a huge boost!",
                 emptyWorld: "Battlefield is empty...", pts: "pts",
                 alertWait: "Connecting to server grid, please wait...",
                 deathTitle: "💀 YOU ARE DEAD!", deathScore: "Final Score: ",
@@ -139,16 +139,19 @@
         let globalPlayers = {}; let globalGems = [];
         let mySnake = { body: [], dx: 1, dy: 0, score: 0 };
         
-        // 🤫 Hidden bot configurations (Fake human player names)
+        // 🤖 Bot names wordpools for random system
+        const BOT_PREFIX = ["Hyper", "Shadow", "Alpha", "Cyber", "Eco", "Pixel", "Neon", "Giga", "Delta", "Wild"];
+        const BOT_SUFFIX = ["Hunter", "Surv", "Blazer", "Knight", "Ghost", "Runner", "Keeper", "Raptor", "X", "Storm"];
+
         let serverBots = [
-            { id: "bot_sparky", name: "Sparky_Gx", color: "#9b59b6", body: [], dx: 1, dy: 0, score: 30, isDead: false },
-            { id: "bot_shadow", name: "ShadowHunter", color: "#7f8c8d", body: [], dx: 0, dy: 1, score: 40, isDead: false },
-            { id: "bot_hunter", name: "Alpha_Player", color: "#c0392b", body: [], dx: -1, dy: 0, score: 20, isDead: false },
-            { id: "bot_blazer", name: "Blazer99", color: "#d35400", body: [], dx: 0, dy: -1, score: 50, isDead: false },
-            { id: "bot_ecobot", name: "Eco_Surv", color: "#1abc9c", body: [], dx: 1, dy: 0, score: 10, isDead: false }
+            { id: "bot_1", name: "", color: "#9b59b6", body: [], dx: 1, dy: 0, score: 30, isDead: false },
+            { id: "bot_2", name: "", color: "#7f8c8d", body: [], dx: 0, dy: 1, score: 40, isDead: false },
+            { id: "bot_3", name: "", color: "#c0392b", body: [], dx: -1, dy: 0, score: 20, isDead: false },
+            { id: "bot_4", name: "", color: "#d35400", body: [], dx: 0, dy: -1, score: 50, isDead: false },
+            { id: "bot_5", name: "", color: "#1abc9c", body: [], dx: 1, dy: 0, score: 10, isDead: false }
         ];
         
-        let activeBuff = "none"; let buffTimer = 0; let fireBullets = []; let thunderDropCounter = 0;
+        let activeBuff = "none"; let buffTimer = 0; let fireBullets = [];
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d"); 
         const GRID_SIZE = 40; const CELL = canvas.width / GRID_SIZE;
@@ -188,6 +191,25 @@
             setTimeout(() => { executeJoin(); }, 300); 
         }
 
+        // Randomly roll names for AI bots every time a server loads
+        function shuffleBotNames() {
+            serverBots.forEach(bot => {
+                let pre = BOT_PREFIX[Math.floor(Math.random() * BOT_PREFIX.length)];
+                let suf = BOT_SUFFIX[Math.floor(Math.random() * BOT_SUFFIX.length)];
+                let num = Math.floor(Math.random() * 90) + 10;
+                bot.name = `${pre}_${suf}${num}`;
+            });
+        }
+
+        function getRandomGemType() {
+            let roll = Math.random();
+            if (roll < 0.01) return '🍏'; // 1% chance for a rare Golden Apple
+            if (roll < 0.40) return '🍒'; // Normal food cherry
+            if (roll < 0.60) return '🔥'; // Fire skill
+            if (roll < 0.80) return '❄️'; // Ice skill
+            return '🧱';                  // Brick obstacle
+        }
+
         function executeJoin() {
             client.subscribe(TOPIC_GEMS);
             myName = document.getElementById("username-input").value.trim() || "Guardian";
@@ -195,8 +217,10 @@
             document.getElementById("game-interface").style.display = "flex";
             document.getElementById("death-overlay").style.display = "none";
             
-            isDead = false; mySnake.score = 0; activeBuff = "none"; buffTimer = 0; fireBullets = []; thunderDropCounter = 0;
+            isDead = false; mySnake.score = 0; activeBuff = "none"; buffTimer = 0; fireBullets = [];
             resetMySnakePosition();
+            
+            shuffleBotNames(); // Roll random names for AI
             serverBots.forEach((bot, idx) => spawnBot(bot, idx));
 
             generateGlobalGems(); 
@@ -207,7 +231,6 @@
             if(loopInterval) clearInterval(loopInterval);
             let speed = 130;
             if(activeBuff === "ice") speed = 220;      
-            if(activeBuff === "thunder") speed = 50;  
             loopInterval = setInterval(gameHeartbeat, speed);
         }
 
@@ -264,23 +287,10 @@
             if (isDead) return;
 
             if(buffTimer > 0) {
-                buffTimer -= (activeBuff === "thunder" ? 0.05 : 0.13); 
+                buffTimer -= 0.13; 
                 document.getElementById("skill-bar").style.display = "block";
-                document.getElementById("skill-bar").innerText = `⚡ 异能状态: ${activeBuff.toUpperCase()} (${Math.ceil(buffTimer)}s)`;
+                document.getElementById("skill-bar").innerText = `异能状态: ${activeBuff.toUpperCase()} (${Math.ceil(buffTimer)}s)`;
                 if(buffTimer <= 0) { activeBuff = "none"; document.getElementById("skill-bar").style.display = "none"; startDynamicEngine(); }
-            }
-
-            if(activeBuff === "thunder") {
-                let head = mySnake.body[0];
-                globalGems.forEach((gem) => {
-                    if(gem.type !== '🧱' && Math.abs(gem.x - head.x) <= 4 && Math.abs(gem.y - head.y) <= 4) { gem.x = head.x; gem.y = head.y; }
-                });
-                thunderDropCounter++;
-                if(thunderDropCounter % 2 === 0) { 
-                    let tailPart = mySnake.body[mySnake.body.length - 1] || head;
-                    globalGems.push({ x: tailPart.x, y: tailPart.y, type: Math.random() > 0.5 ? '🍏' : '🍒' });
-                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); 
-                }
             }
 
             fireBullets.forEach((b, idx) => {
@@ -309,8 +319,10 @@
                     for(let i = globalGems.length - 1; i >= 0; i--) {
                         if(bHead.x === globalGems[i].x && bHead.y === globalGems[i].y) {
                             if(globalGems[i].type === '🧱') { bot.isDead = true; setTimeout(() => spawnBot(bot, idx), 4000); break; }
-                            botAte = true; bot.score += 10; globalGems.splice(i, 1);
-                            globalGems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: ['🍏', '🍒', '🧱'][Math.floor(Math.random()*3)] });
+                            botAte = true; 
+                            bot.score += globalGems[i].type === '🍏' ? 50 : 10; // AI scores more on Golden Apple too
+                            globalGems.splice(i, 1);
+                            globalGems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: getRandomGemType() });
                             client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); break;
                         }
                     }
@@ -333,12 +345,11 @@
                     ate = true; 
                     if(gem.type === '🔥') { activeBuff = "fire"; buffTimer = 5; startDynamicEngine(); }
                     else if(gem.type === '❄️') { activeBuff = "ice"; buffTimer = 7; startDynamicEngine(); }
-                    else if(gem.type === '⚡') { activeBuff = "thunder"; buffTimer = 4; thunderDropCounter = 0; startDynamicEngine(); }
+                    else if(gem.type === '🍏') { mySnake.score += 50; } // Golden Apple gives massive 50 points!
                     else { mySnake.score += 10; }
 
                     globalGems.splice(i, 1);
-                    let types = ['🍏', '🍒', '🔥', '❄️', '⚡', '🧱'];
-                    globalGems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: types[Math.floor(Math.random()*types.length)] });
+                    globalGems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: getRandomGemType() });
                     client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); break;
                 }
             }
@@ -347,7 +358,6 @@
             let currentDisplayColor = baseColor;
             if(activeBuff === "fire") currentDisplayColor = "#e74c3c";
             if(activeBuff === "ice") currentDisplayColor = "#3498db";
-            if(activeBuff === "thunder") currentDisplayColor = "#f1c40f";
 
             client.publish(TOPIC_PRESENCE + myId, JSON.stringify({ name: myName, color: currentDisplayColor, body: mySnake.body, score: mySnake.score }), { qos: 0 });
             serverBots.forEach(bot => {
@@ -389,9 +399,9 @@
         }
 
         function generateGlobalGems() {
-            let gems = []; let types = ['🍏', '🍒', '🔥', '❄️', '⚡', '🧱']; 
+            let gems = [];
             for(let i=0; i<40; i++) { 
-                gems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: types[Math.floor(Math.random()*types.length)] });
+                gems.push({ x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: getRandomGemType() });
             }
             globalGems = gems; client.publish(TOPIC_GEMS, JSON.stringify({ gems: gems }), { qos: 0 });
         }
@@ -419,7 +429,7 @@
             
             if(!isDead && mySnake.body && mySnake.body.length > 0) {
                 let currentDisplayColor = baseColor;
-                if(activeBuff === "fire") currentDisplayColor = "#e74c3c"; if(activeBuff === "ice") currentDisplayColor = "#3498db"; if(activeBuff === "thunder") currentDisplayColor = "#f1c40f";
+                if(activeBuff === "fire") currentDisplayColor = "#e74c3c"; if(activeBuff === "ice") currentDisplayColor = "#3498db";
                 mySnake.body.forEach((part, idx) => { ctx.fillStyle = idx === 0 ? "#ffffff" : currentDisplayColor; ctx.fillRect(part.x*CELL+1, part.y*CELL+1, CELL-2, CELL-2); });
             }
         }
