@@ -65,7 +65,7 @@
 
     <div id="login-page">
         <h1 id="ui-title">地球守护者</h1>
-        <div class="sub-title" id="ui-subtitle">[仅方块不刷新 · 水果无限流版本]</div>
+        <div class="sub-title" id="ui-subtitle">[一千万巨量频道 · 绝对私密版]</div>
         <div class="form-group">
             <label id="ui-label-name">输入你的守护神代号</label>
             <input type="text" id="username-input" placeholder="Name" maxlength="8">
@@ -93,7 +93,7 @@
             <div id="rank-list" style="overflow-y: auto; flex-grow: 1; margin: 10px 0;"></div>
             <div style="font-size:0.75rem; color:#aaa; line-height:1.4;" id="ui-controls">
                 移动: WASD / 方向键<br>
-                💡 规则：**只有方块（🧱）绝对不会刷出新代码**！樱桃（🍒）和金苹果（🍏）吃完会立刻在别处长出新的！
+                🔒 规则：从一千万个频道中随机抽取，几乎遇不到外人！只有方块（🧱）绝对不刷新。
             </div>
         </div>
     </div>
@@ -103,7 +103,7 @@
         const TRANSLATIONS = {
             zh: {
                 connecting: "📡 正在连接云端骨干网...", connected: "🟢 成功接入云端网络集群",
-                title: "🌍 地球守护者", subtitle: "[仅方块不刷新 · 水果无限流版本]",
+                title: "🌍 地球守护者", subtitle: "[一千万巨量频道 · 绝对私密版]",
                 labelName: "输入你的守护神代号:",
                 btnJoin: "开始匹配并登入战场",
                 boardTitle: "🏆 本场英雄榜",
@@ -115,7 +115,7 @@
             },
             en: {
                 connecting: "📡 Connecting to Grid...", connected: "🟢 Connected to Cloud Matrix",
-                title: "🌍 Eco Guardians", subtitle: "[No New Blocks · Fruits Stand Infinite]",
+                title: "🌍 Eco Guardians", subtitle: "[10,000,000 Server Channels Matrix]",
                 labelName: "Enter Codename:",
                 btnJoin: "FIND MATCH & PLAY",
                 boardTitle: "🏆 Leaderboard",
@@ -182,7 +182,8 @@
 
         function autoMatchmaking() {
             if(!amIConnected) return alert(TRANSLATIONS[currentLang].alertWait);
-            selectedServer = Math.floor(Math.random() * 10000) + 1;
+            // 🚀 这里成功修改为 10,000,000 巨量随机房间！
+            selectedServer = Math.floor(Math.random() * 10000000) + 1;
             TOPIC_PRESENCE = `ecoguardians/sv${selectedServer}/presence/`;
             TOPIC_GEMS = `ecoguardians/sv${selectedServer}/gems`;
             globalPlayers = {};
@@ -201,11 +202,11 @@
 
         function getRandomGemType(includeBlock = true) {
             let roll = Math.random();
-            if (roll < 0.02) return '🍏'; // 2% 金苹果
+            if (roll < 0.02) return '🍏'; 
             if (roll < 0.50) return '🍒'; 
             if (roll < 0.65) return '🔥'; 
             if (roll < 0.80) return '❄️'; 
-            return includeBlock ? '🧱' : '🍒'; // 只有开局包含方块，局内刷新全部变成樱桃                  
+            return includeBlock ? '🧱' : '🍒'; 
         }
 
         function executeJoin() {
@@ -295,7 +296,7 @@
                 b.x += b.dx; b.y += b.dy;
                 globalGems.forEach((gem, gIdx) => {
                     if(gem.type === '🧱' && Math.abs(gem.x - b.x) <= 1 && Math.abs(gem.y - b.y) <= 1) { 
-                        globalGems.splice(gIdx, 1); // 方块被打碎后彻底消失，不生成任何新物品
+                        globalGems.splice(gIdx, 1); 
                         fireBullets.splice(idx, 1); 
                         client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }), { qos: 0 }); 
                     }
@@ -324,7 +325,6 @@
                             let oldType = globalGems[i].type;
                             bot.score += oldType === '🍏' ? 50 : 10;
                             
-                            // 核心修改：如果是水果/金苹果，被吃后在别处刷新一个新的食物；如果是方块则直接消失不补。
                             if (oldType !== '🧱') {
                                 globalGems[i] = { x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: getRandomGemType(false) };
                             } else {
@@ -356,7 +356,6 @@
                     else if(oldType === '🍏') { mySnake.score += 50; } 
                     else { mySnake.score += 10; }
 
-                    // 核心修改：如果是水果/金苹果，吃掉后自动刷新；如果是方块直接删除
                     if (oldType !== '🧱') {
                         globalGems[i] = { x: Math.floor(Math.random()*GRID_SIZE), y: Math.floor(Math.random()*GRID_SIZE), type: getRandomGemType(false) };
                     } else {
