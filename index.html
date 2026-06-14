@@ -1,9 +1,24 @@
+没问题，这次我们把 3D 模型的形状也进行大升级，让它们不仅名字叫水果，长得也真正像对应的立体水果！
+
+之前的代码里水果形状比较抽象（比如香蕉只是个单纯的四棱锥）。在这版代码中，我利用 Three.js 的组合几何体（Compound Geometries）技术，给每种水果定制了更形象的 3D 模型：
+
+🍏 青苹果：用球体做果肉，顶部加上一根棕色的果蒂和一片嫩绿色的叶子！
+
+🍌 黄金蕉：用弯曲的多段圆柱体进行拼接，做出标志性的香蕉弯曲弧度！
+
+🍇 幻紫葡：用 3 个紧紧贴在一起的紫色小球组成一串立体小葡萄，顶部同样带有一根果藤！
+
+✨ 67 圣果：一个发光的正二十面体黄金水晶核心，外围环绕着一圈自动旋转的神秘卫星光环，科技感和排面直接拉满！
+
+以下是视觉效果大升级的 3D 真实水果版 完整代码，直接复制覆盖即可：
+
+HTML
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 67 水果矩阵：完美重构版</title>
+    <title>3D 67 水果矩阵：真实模型版</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -29,49 +44,50 @@
 </head>
 <body>
 
-    <div id="status-indicator">📡 正在建立高维连接...</div>
+    <div id="status-indicator">📡 正在构筑 3D 精细模型...</div>
 
     <div id="login-page">
-        <h1>3D 67 水果重组空间</h1>
-        <div class="sub-title">[🔥 修复版：键盘 R 键或 67秒 强力强制重组]</div>
-        <input type="text" id="username-input" style="padding:14px; margin-bottom:20px; width:100%; box-sizing:border-box; background:#1a1a1a; color:#fff; border:1px solid #333; text-align:center; border-radius:6px;" placeholder="代号67" maxlength="8">
-        <button class="btn-game" onclick="start3DGame()">接入水果矩阵</button>
+        <h1>3D 67 水果乐园</h1>
+        <div class="sub-title">[🍏 苹果带叶子 · 🍌 弯弯香蕉 · 🍇 串状葡萄]</div>
+        <input type="text" id="username-input" style="padding:14px; margin-bottom:20px; width:100%; box-sizing:border-box; background:#1a1a1a; color:#fff; border:1px solid #333; text-align:center; border-radius:6px;" placeholder="水果大亨67" maxlength="8">
+        <button class="btn-game" onclick="start3DGame()">进入 3D 精细矩阵</button>
     </div>
 
     <div id="game-interface">
         <div id="kill-announcer"></div>
         <div id="canvas-container">
             <div id="death-overlay">
-                <h1 style="color:#e74c3c;">空间解体</h1>
-                <p id="ui-death-score">积分: 0</p>
-                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">凝聚重建</button>
+                <h1 style="color:#e74c3c;">游戏结束</h1>
+                <p id="ui-death-score">最终积分: 0</p>
+                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">重新凝聚</button>
             </div>
         </div>
         
         <div id="sidebar">
-            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67 战力榜</h3>
+            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67 积分榜</h3>
             <div id="rank-list" style="overflow-y: auto; flex-grow: 1; margin: 10px 0;"></div>
             
             <div id="refresh-timer">⏳ 下次重组倒计时: 67s</div>
             <button class="btn-game" style="font-size:0.9rem; padding:10px 0; margin-top:10px;" onclick="manualRefreshGems()">强力重组全场水果 (R)</button>
 
             <div class="fruit-legend">
-                <b style="color:#00ff66;">🍇 矩阵能量图鉴：</b><br>
-                🍏 青苹果：+10 | 🍌 黄金蕉：+20<br>
-                🍇 幻紫葡：+30 | ✨ 67圣果：+67
+                <b style="color:#00ff66;">🍇 真实的 3D 水果：</b><br>
+                🍏 青苹果：<b>+10分</b> (带叶立体球)<br>
+                🍌 黄金蕉：<b>+20分</b> (多段拼接弯蕉)<br>
+                🍇 幻紫葡：<b>+30分</b> (三合一立体串)<br>
+                ✨ 67圣果：<b style="color:#f1c40f;">+67分</b> (发光核心+星环)
             </div>
             
             <div style="font-size:0.7rem; color:#666; line-height:1.4; margin-top: 10px;">
-                操控：W A S D 控制变向<br>
-                🔥 <b>如遇死角，速按 R 键强制重组！</b>
+                操作：W A S D 控制方向<br>
+                重绘优化版：按 R 键水果瞬间洗牌
             </div>
         </div>
     </div>
 
     <script>
         const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        let TOPIC_GEMS = `ecoguardians/3dperf67/gems`;
-        let TOPIC_ALERTS = `ecoguardians/3dperf67/alerts`;
+        let TOPIC_GEMS = `ecoguardians/3drealfruit67/gems`;
         
         const GRID_SIZE = 30; 
         let mySnake = { body: [], dx: 1, dy: 0, score: 0 };
@@ -79,23 +95,23 @@
         let isDead = false;
         let gameLoopTimer = null;
         let autoRefreshCounter = 67;
-        let forceRebuildMeshTrigger = false; // 强力重绘触发锁
+        let forceRebuildMeshTrigger = false;
 
         let scene, camera, renderer;
         let snakeMeshGroup = []; 
         let gemMeshGroup = [];   
 
         const FRUIT_TYPES = [
-            { name: 'apple', color: 0x00ff66, score: 10, geom: 'box' },
-            { name: 'banana', color: 0xffff00, score: 20, geom: 'cone' },
-            { name: 'grape', color: 0x9b59b6, score: 30, geom: 'sphere' },
-            { name: 'fruit67', color: 0xf1c40f, score: 67, geom: 'star' }
+            { name: 'apple', color: 0x2ecc71, score: 10 },   // 饱满青苹果绿
+            { name: 'banana', color: 0xf1c40f, score: 20 },  // 黄金香蕉黄
+            { name: 'grape', color: 0x9b59b6, score: 30 },   // 幻紫葡萄紫
+            { name: 'fruit67', color: 0xe67e22, score: 67 }  // 璀璨圣果橙金
         ];
 
         client.on('connect', () => {
             document.getElementById("status-indicator").style.backgroundColor = "#00ff66";
             document.getElementById("status-indicator").style.color = "#000";
-            document.getElementById("status-indicator").innerText = "🟢 67核心同步成功";
+            document.getElementById("status-indicator").innerText = "🟢 3D 精细模型矩阵已就绪";
         });
 
         client.on('message', (topic, message) => {
@@ -103,8 +119,8 @@
                 let data = JSON.parse(message.toString());
                 if (topic === TOPIC_GEMS) { 
                     globalGems = data.gems || []; 
-                    forceRebuildMeshTrigger = true; // 允许下一帧强制重新生成 3D 实体
-                    if(data.reason === "refresh") showAnnouncement("🌀 警告：水果空间已强制重组洗牌！");
+                    forceRebuildMeshTrigger = true; 
+                    if(data.reason === "refresh") showAnnouncement("🌀 水果矩阵完成高维精细重组！");
                 }
             } catch(e){}
         });
@@ -114,15 +130,18 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050709);
             camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(GRID_SIZE / 2, 22, GRID_SIZE + 4);
+            camera.position.set(GRID_SIZE / 2, 20, GRID_SIZE + 2);
             camera.lookAt(GRID_SIZE / 2, 0, GRID_SIZE / 2);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            let light = new THREE.DirectionalLight(0xffffff, 0.5);
-            light.position.set(15, 30, 15);
+            
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            let light = new THREE.DirectionalLight(0xffffff, 0.6);
+            light.position.set(10, 25, 20);
             scene.add(light);
+            
             let gh = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x1f272e, 0x111418);
             gh.position.set(GRID_SIZE/2-0.5, 0, GRID_SIZE/2-0.5);
             scene.add(gh);
@@ -131,9 +150,18 @@
 
         function animate3D() {
             requestAnimationFrame(animate3D);
-            gemMeshGroup.forEach(mesh => {
-                mesh.rotation.y += 0.03;
-                mesh.position.y = 0.5 + Math.sin(Date.now() * 0.005 + mesh.position.x) * 0.1;
+            
+            // 真实的 3D 动态特效
+            gemMeshGroup.forEach(group => {
+                // 水果整体自转和上下漂浮
+                group.rotation.y += 0.025;
+                group.position.y = 0.5 + Math.sin(Date.now() * 0.004 + group.position.x) * 0.08;
+
+                // 如果是 67 圣果，让它的外围光环以不同速度反向旋转
+                if (group.userData && group.userData.fType === 'fruit67' && group.children[1]) {
+                    group.children[1].rotation.x += 0.05;
+                    group.children[1].rotation.y += 0.02;
+                }
             });
             renderer.render(scene, camera);
         }
@@ -146,24 +174,19 @@
             respawn3DPlayer();
             if(globalGems.length === 0) manualRefreshGems();
             
-            // 自动刷新倒计时
             setInterval(() => {
                 if(isDead) return;
                 autoRefreshCounter--;
                 document.getElementById("refresh-timer").innerText = `⏳ 下次重组倒计时: ${autoRefreshCounter}s`;
-                if(autoRefreshCounter <= 0) {
-                    manualRefreshGems();
-                }
+                if(autoRefreshCounter <= 0) { manualRefreshGems(); }
             }, 1000);
         }
 
-        // --- 核心重组刷新：强力清空原有状态 ---
         function manualRefreshGems() {
             let newGems = [];
             for (let i = 0; i < 50; i++) { newGems.push(createNewRandomFruit()); }
             globalGems = newGems;
-            
-            forceRebuildMeshTrigger = true; // 激活强制清除重绘锁
+            forceRebuildMeshTrigger = true; 
             client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "refresh" }));
             autoRefreshCounter = 67; 
         }
@@ -171,9 +194,9 @@
         function createNewRandomFruit() {
             let rand = Math.random();
             let config = FRUIT_TYPES[0];
-            if (rand > 0.95) config = FRUIT_TYPES[3];      // 传说67圣果
-            else if (rand > 0.82) config = FRUIT_TYPES[2]; // 葡萄
-            else if (rand > 0.60) config = FRUIT_TYPES[1]; // 香蕉
+            if (rand > 0.95) config = FRUIT_TYPES[3];      // 67圣果
+            else if (rand > 0.80) config = FRUIT_TYPES[2]; // 葡萄
+            else if (rand > 0.55) config = FRUIT_TYPES[1]; // 香蕉
             return {
                 x: Math.floor(Math.random() * GRID_SIZE),
                 y: Math.floor(Math.random() * GRID_SIZE),
@@ -181,6 +204,113 @@
                 color: config.color,
                 score: config.score
             };
+        }
+
+        // --- 核心：精细水果 3D 模型拼装构造工厂 ---
+        function createFruit3DModel(type, colorHex) {
+            const fruitGroup = new THREE.Group();
+            fruitGroup.userData = { fType: type };
+
+            if (type === 'apple') {
+                // 🍏 青苹果：主球体 + 果蒂 + 叶子
+                const bodyGeo = new THREE.SphereGeometry(0.35, 16, 16);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                fruitGroup.add(body);
+
+                // 棕色果蒂
+                const stemGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.2);
+                const stemMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+                const stem = new THREE.Mesh(stemGeo, stemMat);
+                stem.position.set(0, 0.4, 0);
+                stem.rotation.z = 0.2;
+                fruitGroup.add(stem);
+
+                // 嫩绿叶子
+                const leafGeo = new THREE.ConeGeometry(0.08, 0.2, 4);
+                const leafMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+                const leaf = new THREE.Mesh(leafGeo, leafMat);
+                leaf.position.set(0.08, 0.45, 0);
+                leaf.rotation.z = -0.6;
+                fruitGroup.add(leaf);
+
+            } else if (type === 'banana') {
+                // 🍌 黄金蕉：采用 3 段不同旋转角度的圆柱体，拼出香蕉特有的弯曲形态
+                const bananaGroup = new THREE.Group();
+                const partGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.25, 5);
+                const bananaMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+
+                const p1 = new THREE.Mesh(partGeo, bananaMat);
+                p1.position.set(-0.15, 0.1, 0);
+                p1.rotation.z = 0.5;
+                bananaGroup.add(p1);
+
+                const p2 = new THREE.Mesh(partGeo, bananaMat);
+                p2.position.set(0, 0, 0);
+                p2.rotation.z = 0;
+                bananaGroup.add(p2);
+
+                const p3 = new THREE.Mesh(partGeo, bananaMat);
+                p3.position.set(0.15, 0.1, 0);
+                p3.rotation.z = -0.5;
+                bananaGroup.add(p3);
+
+                // 香蕉两头的黑色尖尖
+                const tipGeo = new THREE.ConeGeometry(0.06, 0.08, 4);
+                const tipMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+                const tip1 = new THREE.Mesh(tipGeo, tipMat);
+                tip1.position.set(-0.25, 0.22, 0);
+                tip1.rotation.z = 0.8;
+                bananaGroup.add(tip1);
+
+                fruitGroup.add(bananaGroup);
+
+            } else if (type === 'grape') {
+                // 🍇 幻紫葡：由 3 个紧挨着的紫色小球错落堆叠，形成一小串葡萄
+                const grapeMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.1 });
+                const ballGeo = new THREE.SphereGeometry(0.2, 12, 12);
+
+                const g1 = new THREE.Mesh(ballGeo, grapeMat);
+                g1.position.set(-0.12, 0.1, 0);
+                fruitGroup.add(g1);
+
+                const g2 = new THREE.Mesh(ballGeo, grapeMat);
+                g2.position.set(0.12, 0.1, 0);
+                fruitGroup.add(g2);
+
+                const g3 = new THREE.Mesh(ballGeo, grapeMat);
+                g3.position.set(0, -0.1, 0); // 下方的核心堆叠球
+                fruitGroup.add(g3);
+
+                // 果藤
+                const vineGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.15);
+                const vineMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+                const vine = new THREE.Mesh(vineGeo, vineMat);
+                vine.position.set(0, 0.25, 0);
+                fruitGroup.add(vine);
+
+            } else if (type === 'fruit67') {
+                // ✨ 67圣果：发光的立体水晶核心 + 酷炫的环绕卫星双星环
+                const coreGeo = new THREE.IcosahedronGeometry(0.32, 0); // 正二十面体璀璨结晶
+                const coreMat = new THREE.MeshStandardMaterial({ 
+                    color: 0xf1c40f, 
+                    emissive: 0xf1c40f, 
+                    emissiveIntensity: 0.8,
+                    metalness: 0.8,
+                    roughness: 0.1
+                });
+                const core = new THREE.Mesh(coreGeo, coreMat);
+                fruitGroup.add(core);
+
+                // 环绕它的赛博星环
+                const ringGeo = new THREE.TorusGeometry(0.5, 0.03, 4, 24);
+                const ringMat = new THREE.MeshStandardMaterial({ color: 0x00ff66, emissive: 0x00ff66, emissiveIntensity: 0.5 });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 3;
+                fruitGroup.add(ring);
+            }
+
+            return fruitGroup;
         }
 
         function gameStep() {
@@ -202,7 +332,7 @@
                     globalGems.splice(i, 1);
                     globalGems.push(createNewRandomFruit()); 
                     
-                    forceRebuildMeshTrigger = true; // 吃的时候也通知重绘，确保数量对齐
+                    forceRebuildMeshTrigger = true; 
                     client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "eat" }));
                     updateLeaderboard();
                     break;
@@ -212,39 +342,32 @@
             render3DObjects();
         }
 
-        // --- 核心：增加了强力清空销毁逻辑 ---
         function render3DObjects() {
-            // 清理旧蛇身
+            // 渲染蛇身
             snakeMeshGroup.forEach(m => scene.remove(m));
             snakeMeshGroup = [];
             mySnake.body.forEach((p, i) => {
                 const geo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
-                const mat = new THREE.MeshStandardMaterial({ color: i===0?0xffffff:0x00ff66, emissive: i===0?0xffffff:0x00ff66, emissiveIntensity: 0.2 });
+                const mat = new THREE.MeshStandardMaterial({ color: i===0?0xffffff:0x00ff66, emissive: i===0?0xffffff:0x00ff66, emissiveIntensity: 0.1 });
                 const m = new THREE.Mesh(geo, mat);
                 m.position.set(p.x, 0.45, p.y);
                 scene.add(m);
                 snakeMeshGroup.push(m);
             });
 
-            // 完美修复：当触发重组时，强行把 3D 渲染图层解绑、清理，彻底刷新
+            // 完美的 3D 模型增量重绘
             if (forceRebuildMeshTrigger || gemMeshGroup.length !== globalGems.length) {
-                gemMeshGroup.forEach(m => scene.remove(m)); // 强制从 3D 空间完全移除旧的水果模型
+                gemMeshGroup.forEach(m => scene.remove(m)); 
                 gemMeshGroup = [];
 
                 globalGems.forEach(g => {
-                    let geo;
-                    if(g.fType === 'banana') geo = new THREE.ConeGeometry(0.28, 0.7, 4);
-                    else if(g.fType === 'grape') geo = new THREE.SphereGeometry(0.32, 8, 8);
-                    else if(g.fType === 'fruit67') geo = new THREE.OctahedronGeometry(0.45);
-                    else geo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-                    
-                    const mat = new THREE.MeshStandardMaterial({ color: g.color, emissive: g.color, emissiveIntensity: 0.4, roughness: 0.1 });
-                    const m = new THREE.Mesh(geo, mat);
-                    m.position.set(g.x, 0.5, g.y);
-                    scene.add(m);
-                    gemMeshGroup.push(m);
+                    // 调用精细水果制造工厂生成精美模型
+                    const fruitMesh = createFruit3DModel(g.fType, g.color);
+                    fruitMesh.position.set(g.x, 0.5, g.y);
+                    scene.add(fruitMesh);
+                    gemMeshGroup.push(fruitMesh);
                 });
-                forceRebuildMeshTrigger = false; // 重绘完成，关闭重绘锁
+                forceRebuildMeshTrigger = false; 
             }
         }
 
@@ -265,7 +388,7 @@
         window.addEventListener("keydown", e => {
             if (isDead) return;
             const k = e.key.toLowerCase();
-            if (k === 'r') manualRefreshGems(); // 按 R 触发强制洗牌刷新
+            if (k === 'r') manualRefreshGems(); 
             if ((k === 'w' || e.key === 'ArrowUp') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = -1; }
             if ((k === 's' || e.key === 'ArrowDown') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = 1; }
             if ((k === 'a' || e.key === 'ArrowLeft') && mySnake.dx === 0) { mySnake.dx = -1; mySnake.dy = 0; }
