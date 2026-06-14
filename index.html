@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 67 矩阵：水果刷新版</title>
+    <title>3D 67 水果矩阵：完美重构版</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -17,69 +17,69 @@
         #game-interface { display: none; flex-direction: row; gap: 20px; align-items: flex-start; position: relative; width: 95vw; height: 85vh; }
         #canvas-container { flex-grow: 1; height: 100%; border: 3px solid #1f272e; border-radius: 8px; position: relative; overflow: hidden; background: #000; }
         
-        #kill-announcer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 255, 100, 0.9); color: #000; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,100,0.4); display: none; text-align: center; min-width: 300px; }
+        #kill-announcer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 255, 100, 0.95); color: #000; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,100,0.4); display: none; text-align: center; min-width: 320px; }
         #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 7, 9, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; display: none; z-index: 110; }
         
         #sidebar { background: #111418; width: 260px; padding: 20px; border-radius: 8px; border: 1px solid #1f272e; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
         #status-indicator { position: absolute; top: 15px; left: 15px; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; background: #e74c3c; font-weight: bold; z-index: 200; }
         
         .fruit-legend { font-size: 0.8rem; margin-top: 10px; background: #1a1a1a; padding: 8px; border-radius: 4px; border: 1px solid #333; }
-        #refresh-timer { margin-top: 10px; font-size: 0.85rem; color: #00ff66; font-weight: bold; }
+        #refresh-timer { margin-top: 10px; font-size: 0.85rem; color: #00ff66; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div id="status-indicator">📡 连接 67 矩阵中...</div>
+    <div id="status-indicator">📡 正在建立高维连接...</div>
 
     <div id="login-page">
-        <h1>3D 67 水果矩阵</h1>
-        <div class="sub-title">[🍎支持 R 键手动刷新 · 67秒自动重组]</div>
+        <h1>3D 67 水果重组空间</h1>
+        <div class="sub-title">[🔥 修复版：键盘 R 键或 67秒 强力强制重组]</div>
         <input type="text" id="username-input" style="padding:14px; margin-bottom:20px; width:100%; box-sizing:border-box; background:#1a1a1a; color:#fff; border:1px solid #333; text-align:center; border-radius:6px;" placeholder="代号67" maxlength="8">
-        <button class="btn-game" onclick="start3DGame()">开启矩阵</button>
+        <button class="btn-game" onclick="start3DGame()">接入水果矩阵</button>
     </div>
 
     <div id="game-interface">
         <div id="kill-announcer"></div>
         <div id="canvas-container">
             <div id="death-overlay">
-                <h1 style="color:#e74c3c;">空间坍塌</h1>
+                <h1 style="color:#e74c3c;">空间解体</h1>
                 <p id="ui-death-score">积分: 0</p>
-                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">重新凝聚</button>
+                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">凝聚重建</button>
             </div>
         </div>
         
         <div id="sidebar">
-            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67 英雄榜</h3>
+            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67 战力榜</h3>
             <div id="rank-list" style="overflow-y: auto; flex-grow: 1; margin: 10px 0;"></div>
             
-            <div id="refresh-timer">⏳ 下次自动刷新: 67s</div>
-            <button class="btn-game" style="font-size:0.9rem; padding:10px 0; margin-top:10px;" onclick="manualRefreshGems()">手动刷新水果 (R)</button>
+            <div id="refresh-timer">⏳ 下次重组倒计时: 67s</div>
+            <button class="btn-game" style="font-size:0.9rem; padding:10px 0; margin-top:10px;" onclick="manualRefreshGems()">强力重组全场水果 (R)</button>
 
             <div class="fruit-legend">
-                <b style="color:#00ff66;">🍇 水果图鉴：</b><br>
-                🍏 青苹果：+10 | 🍌 香蕉：+20<br>
-                🍇 葡萄：+30 | ✨ 圣果：+67
+                <b style="color:#00ff66;">🍇 矩阵能量图鉴：</b><br>
+                🍏 青苹果：+10 | 🍌 黄金蕉：+20<br>
+                🍇 幻紫葡：+30 | ✨ 67圣果：+67
             </div>
             
             <div style="font-size:0.7rem; color:#666; line-height:1.4; margin-top: 10px;">
-                WASD 转向 | <b>R 刷新全场</b><br>
-                全图严格 50 个静态水果
+                操控：W A S D 控制变向<br>
+                🔥 <b>如遇死角，速按 R 键强制重组！</b>
             </div>
         </div>
     </div>
 
     <script>
         const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        let TOPIC_GEMS = `ecoguardians/3drefresh67/gems`;
-        let TOPIC_ALERTS = `ecoguardians/3drefresh67/alerts`;
+        let TOPIC_GEMS = `ecoguardians/3dperf67/gems`;
+        let TOPIC_ALERTS = `ecoguardians/3dperf67/alerts`;
         
         const GRID_SIZE = 30; 
         let mySnake = { body: [], dx: 1, dy: 0, score: 0 };
         let globalGems = [];
         let isDead = false;
-        let activeBuff = "none";
         let gameLoopTimer = null;
         let autoRefreshCounter = 67;
+        let forceRebuildMeshTrigger = false; // 强力重绘触发锁
 
         let scene, camera, renderer;
         let snakeMeshGroup = []; 
@@ -94,7 +94,8 @@
 
         client.on('connect', () => {
             document.getElementById("status-indicator").style.backgroundColor = "#00ff66";
-            document.getElementById("status-indicator").innerText = "🟢 67号矩阵已锁定";
+            document.getElementById("status-indicator").style.color = "#000";
+            document.getElementById("status-indicator").innerText = "🟢 67核心同步成功";
         });
 
         client.on('message', (topic, message) => {
@@ -102,10 +103,9 @@
                 let data = JSON.parse(message.toString());
                 if (topic === TOPIC_GEMS) { 
                     globalGems = data.gems || []; 
-                    // 收到刷新指令时提示
-                    if(data.reason === "refresh") showAnnouncement("🌀 水果矩阵已重新初始化！");
+                    forceRebuildMeshTrigger = true; // 允许下一帧强制重新生成 3D 实体
+                    if(data.reason === "refresh") showAnnouncement("🌀 警告：水果空间已强制重组洗牌！");
                 }
-                if (topic === TOPIC_ALERTS) { showAnnouncement(data.text); }
             } catch(e){}
         });
 
@@ -142,39 +142,38 @@
             document.getElementById("login-page").style.display = "none";
             document.getElementById("game-interface").style.display = "flex";
             init3DScene();
-            client.subscribe(TOPIC_ALERTS);
             client.subscribe(TOPIC_GEMS);
             respawn3DPlayer();
             if(globalGems.length === 0) manualRefreshGems();
             
-            // 启动 67 秒倒计时自动刷新器
+            // 自动刷新倒计时
             setInterval(() => {
                 if(isDead) return;
                 autoRefreshCounter--;
-                document.getElementById("refresh-timer").innerText = `⏳ 下次自动刷新: ${autoRefreshCounter}s`;
+                document.getElementById("refresh-timer").innerText = `⏳ 下次重组倒计时: ${autoRefreshCounter}s`;
                 if(autoRefreshCounter <= 0) {
                     manualRefreshGems();
-                    autoRefreshCounter = 67;
                 }
             }, 1000);
         }
 
-        // --- 核心刷新函数 ---
+        // --- 核心重组刷新：强力清空原有状态 ---
         function manualRefreshGems() {
             let newGems = [];
             for (let i = 0; i < 50; i++) { newGems.push(createNewRandomFruit()); }
             globalGems = newGems;
-            // 通过 MQTT 同步全场，并标记为 refresh 动作
+            
+            forceRebuildMeshTrigger = true; // 激活强制清除重绘锁
             client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "refresh" }));
-            autoRefreshCounter = 67; // 重置计时器
+            autoRefreshCounter = 67; 
         }
 
         function createNewRandomFruit() {
             let rand = Math.random();
             let config = FRUIT_TYPES[0];
-            if (rand > 0.96) config = FRUIT_TYPES[3];
-            else if (rand > 0.85) config = FRUIT_TYPES[2];
-            else if (rand > 0.65) config = FRUIT_TYPES[1];
+            if (rand > 0.95) config = FRUIT_TYPES[3];      // 传说67圣果
+            else if (rand > 0.82) config = FRUIT_TYPES[2]; // 葡萄
+            else if (rand > 0.60) config = FRUIT_TYPES[1]; // 香蕉
             return {
                 x: Math.floor(Math.random() * GRID_SIZE),
                 y: Math.floor(Math.random() * GRID_SIZE),
@@ -194,14 +193,17 @@
                 if (head.x === mySnake.body[i].x && head.y === mySnake.body[i].y) { gameOver(); return; }
             }
             mySnake.body.unshift(head);
+            
             let ate = false;
             for (let i = globalGems.length - 1; i >= 0; i--) {
                 if (head.x === globalGems[i].x && head.y === globalGems[i].y) {
                     ate = true;
                     mySnake.score += globalGems[i].score;
                     globalGems.splice(i, 1);
-                    globalGems.push(createNewRandomFruit()); // 吃一个补一个
-                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }));
+                    globalGems.push(createNewRandomFruit()); 
+                    
+                    forceRebuildMeshTrigger = true; // 吃的时候也通知重绘，确保数量对齐
+                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "eat" }));
                     updateLeaderboard();
                     break;
                 }
@@ -210,7 +212,9 @@
             render3DObjects();
         }
 
+        // --- 核心：增加了强力清空销毁逻辑 ---
         function render3DObjects() {
+            // 清理旧蛇身
             snakeMeshGroup.forEach(m => scene.remove(m));
             snakeMeshGroup = [];
             mySnake.body.forEach((p, i) => {
@@ -222,21 +226,25 @@
                 snakeMeshGroup.push(m);
             });
 
-            if (gemMeshGroup.length !== globalGems.length) {
-                gemMeshGroup.forEach(m => scene.remove(m));
+            // 完美修复：当触发重组时，强行把 3D 渲染图层解绑、清理，彻底刷新
+            if (forceRebuildMeshTrigger || gemMeshGroup.length !== globalGems.length) {
+                gemMeshGroup.forEach(m => scene.remove(m)); // 强制从 3D 空间完全移除旧的水果模型
                 gemMeshGroup = [];
+
                 globalGems.forEach(g => {
                     let geo;
-                    if(g.fType === 'banana') geo = new THREE.ConeGeometry(0.3, 0.7, 4);
-                    else if(g.fType === 'grape') geo = new THREE.SphereGeometry(0.35, 8, 8);
-                    else if(g.fType === 'fruit67') geo = new THREE.OctahedronGeometry(0.5);
+                    if(g.fType === 'banana') geo = new THREE.ConeGeometry(0.28, 0.7, 4);
+                    else if(g.fType === 'grape') geo = new THREE.SphereGeometry(0.32, 8, 8);
+                    else if(g.fType === 'fruit67') geo = new THREE.OctahedronGeometry(0.45);
                     else geo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-                    const mat = new THREE.MeshStandardMaterial({ color: g.color, emissive: g.color, emissiveIntensity: 0.4 });
+                    
+                    const mat = new THREE.MeshStandardMaterial({ color: g.color, emissive: g.color, emissiveIntensity: 0.4, roughness: 0.1 });
                     const m = new THREE.Mesh(geo, mat);
                     m.position.set(g.x, 0.5, g.y);
                     scene.add(m);
                     gemMeshGroup.push(m);
                 });
+                forceRebuildMeshTrigger = false; // 重绘完成，关闭重绘锁
             }
         }
 
@@ -257,7 +265,7 @@
         window.addEventListener("keydown", e => {
             if (isDead) return;
             const k = e.key.toLowerCase();
-            if (k === 'r') manualRefreshGems(); // 按下 R 键手动刷新
+            if (k === 'r') manualRefreshGems(); // 按 R 触发强制洗牌刷新
             if ((k === 'w' || e.key === 'ArrowUp') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = -1; }
             if ((k === 's' || e.key === 'ArrowDown') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = 1; }
             if ((k === 'a' || e.key === 'ArrowLeft') && mySnake.dx === 0) { mySnake.dx = -1; mySnake.dy = 0; }
