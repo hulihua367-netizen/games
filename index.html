@@ -3,378 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地球守护者：3D 67 矩阵空间</title>
-    <!-- 引入 MQTT 和 Three.js 3D 引擎 -->
+    <title>3D 67 矩阵：水果刷新版</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { background-color: #050709; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow: hidden; user-select: none; }
         #login-page { display: flex; flex-direction: column; align-items: center; background: #111418; padding: 40px; border-radius: 12px; border: 2px solid #676767; box-shadow: 0 0 30px rgba(0,255,100,0.2); width: 100%; max-width: 420px; text-align: center; box-sizing: border-box; z-index: 100; }
         h1 { color: #00ff66; font-size: 2.6rem; margin: 0 0 5px 0; text-shadow: 0 0 15px rgba(0,255,100,0.6); }
-        .sub-title { font-size: 0.95rem; color: #888; margin-bottom: 30px; letter-spacing: 1px; }
-        .form-group { width: 100%; text-align: left; margin-bottom: 25px; }
-        .form-group label { display: block; font-size: 0.9rem; color: #aaa; margin-bottom: 8px; font-weight: bold; }
-        input { padding: 14px; font-size: 1.2rem; width: 100%; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #fff; box-sizing: border-box; text-align: center; }
+        .sub-title { font-size: 0.95rem; color: #aaa; margin-bottom: 30px; letter-spacing: 1px; }
         .btn-game { background-color: #00ff66; color: #000; border: none; padding: 16px 0; width: 100%; font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,255,100,0.3); }
         .btn-game:hover { background-color: #00cc52; transform: scale(1.02); }
         
         #game-interface { display: none; flex-direction: row; gap: 20px; align-items: flex-start; position: relative; width: 95vw; height: 85vh; }
         #canvas-container { flex-grow: 1; height: 100%; border: 3px solid #1f272e; border-radius: 8px; position: relative; overflow: hidden; background: #000; }
         
-        #kill-announcer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 255, 100, 0.9); color: #000; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,100,0.4); display: none; text-align: center; }
+        #kill-announcer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 255, 100, 0.9); color: #000; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,100,0.4); display: none; text-align: center; min-width: 300px; }
         #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 7, 9, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; display: none; z-index: 110; }
-        .death-title { color: #e74c3c; font-size: 3rem; margin-bottom: 10px; font-weight: bold; }
         
         #sidebar { background: #111418; width: 260px; padding: 20px; border-radius: 8px; border: 1px solid #1f272e; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
-        #player-count-indicator { background: rgba(0, 255, 100, 0.1); border: 1px solid #00ff66; color: #00ff66; padding: 10px; text-align: center; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-bottom: 20px; }
-        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; border-bottom: 1px dashed #222; }
         #status-indicator { position: absolute; top: 15px; left: 15px; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; background: #e74c3c; font-weight: bold; z-index: 200; }
+        
+        .fruit-legend { font-size: 0.8rem; margin-top: 10px; background: #1a1a1a; padding: 8px; border-radius: 4px; border: 1px solid #333; }
+        #refresh-timer { margin-top: 10px; font-size: 0.85rem; color: #00ff66; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="status-indicator">📡 正在初始化 3D 空间...</div>
+    <div id="status-indicator">📡 连接 67 矩阵中...</div>
 
-    <!-- 登录界面 -->
     <div id="login-page">
-        <h1>3D 67 矩阵空间</h1>
-        <div class="sub-title">[🚀 3D 立体视觉 · 670分触发终极暴走]</div>
-        <div class="form-group">
-            <label>输入你的 3D 守护者代号</label>
-            <input type="text" id="username-input" placeholder="玩家67" maxlength="8">
-        </div>
-        <button class="btn-game" onclick="start3DGame()">进入 3D 矩阵</button>
+        <h1>3D 67 水果矩阵</h1>
+        <div class="sub-title">[🍎支持 R 键手动刷新 · 67秒自动重组]</div>
+        <input type="text" id="username-input" style="padding:14px; margin-bottom:20px; width:100%; box-sizing:border-box; background:#1a1a1a; color:#fff; border:1px solid #333; text-align:center; border-radius:6px;" placeholder="代号67" maxlength="8">
+        <button class="btn-game" onclick="start3DGame()">开启矩阵</button>
     </div>
 
-    <!-- 游戏界面 -->
     <div id="game-interface">
         <div id="kill-announcer"></div>
         <div id="canvas-container">
-            <!-- Three.js 会把 3D 画布渲染到这里 -->
             <div id="death-overlay">
-                <div class="death-title">空间坍塌 (你牺牲了)</div>
-                <p style="font-size: 1.2rem; color: #aaa; margin-bottom: 20px;" id="ui-death-score">净化积分: 0</p>
-                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">重新凝聚体</button>
+                <h1 style="color:#e74c3c;">空间坍塌</h1>
+                <p id="ui-death-score">积分: 0</p>
+                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">重新凝聚</button>
             </div>
         </div>
         
-        <!-- 侧边栏 -->
         <div id="sidebar">
-            <div id="player-count-indicator">👥 在线玩家: 1</div>
-            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67 宇宙战力榜</h3>
+            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67 英雄榜</h3>
             <div id="rank-list" style="overflow-y: auto; flex-grow: 1; margin: 10px 0;"></div>
-            <div style="font-size:0.75rem; color:#aaa; line-height:1.5;">
-                操控：<b>W A S D</b> 或 <b>方向键</b><br>
-                视角：3D 俯仰锁定透视<br>
-                🍏 <b>全图严格 50 个 3D 浮空苹果</b><br>
-                ✨ <b>达到 670 分激活超维 67 彩虹霓虹模式！</b>
+            
+            <div id="refresh-timer">⏳ 下次自动刷新: 67s</div>
+            <button class="btn-game" style="font-size:0.9rem; padding:10px 0; margin-top:10px;" onclick="manualRefreshGems()">手动刷新水果 (R)</button>
+
+            <div class="fruit-legend">
+                <b style="color:#00ff66;">🍇 水果图鉴：</b><br>
+                🍏 青苹果：+10 | 🍌 香蕉：+20<br>
+                🍇 葡萄：+30 | ✨ 圣果：+67
+            </div>
+            
+            <div style="font-size:0.7rem; color:#666; line-height:1.4; margin-top: 10px;">
+                WASD 转向 | <b>R 刷新全场</b><br>
+                全图严格 50 个静态水果
             </div>
         </div>
     </div>
 
     <script>
-        // --- 联网与多玩家数据配置 ---
         const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        let TOPIC_PRESENCE = `ecoguardians/3d67/presence/`;
-        let TOPIC_GEMS = `ecoguardians/3d67/gems`;
-        let TOPIC_ALERTS = `ecoguardians/3d67/alerts`;
-        let myId = "p3d_" + Math.random().toString(36).substring(2, 9);
-        let myName = "";
-
-        // --- 游戏核心状态 ---
-        const GRID_SIZE = 30; // 3D 网格大小 30x30
+        let TOPIC_GEMS = `ecoguardians/3drefresh67/gems`;
+        let TOPIC_ALERTS = `ecoguardians/3drefresh67/alerts`;
+        
+        const GRID_SIZE = 30; 
         let mySnake = { body: [], dx: 1, dy: 0, score: 0 };
         let globalGems = [];
         let isDead = false;
         let activeBuff = "none";
         let gameLoopTimer = null;
+        let autoRefreshCounter = 67;
 
-        // --- Three.js 3D 引擎变量 ---
         let scene, camera, renderer;
-        let snakeMeshGroup = []; // 存放自己蛇的 3D 模型方块
-        let gemMeshGroup = [];   // 存放食物的 3D 模型
-        let gridHelper;
+        let snakeMeshGroup = []; 
+        let gemMeshGroup = [];   
 
-        // --- 联网初始化 ---
+        const FRUIT_TYPES = [
+            { name: 'apple', color: 0x00ff66, score: 10, geom: 'box' },
+            { name: 'banana', color: 0xffff00, score: 20, geom: 'cone' },
+            { name: 'grape', color: 0x9b59b6, score: 30, geom: 'sphere' },
+            { name: 'fruit67', color: 0xf1c40f, score: 67, geom: 'star' }
+        ];
+
         client.on('connect', () => {
             document.getElementById("status-indicator").style.backgroundColor = "#00ff66";
-            document.getElementById("status-indicator").style.color = "#000";
-            document.getElementById("status-indicator").innerText = "🟢 3D 矩阵云端已同步";
+            document.getElementById("status-indicator").innerText = "🟢 67号矩阵已锁定";
         });
 
         client.on('message', (topic, message) => {
             try {
                 let data = JSON.parse(message.toString());
-                if (topic === TOPIC_GEMS) { globalGems = data.gems || []; }
+                if (topic === TOPIC_GEMS) { 
+                    globalGems = data.gems || []; 
+                    // 收到刷新指令时提示
+                    if(data.reason === "refresh") showAnnouncement("🌀 水果矩阵已重新初始化！");
+                }
                 if (topic === TOPIC_ALERTS) { showAnnouncement(data.text); }
             } catch(e){}
         });
 
-        // --- 初始化 3D 场景空间 ---
         function init3DScene() {
             const container = document.getElementById('canvas-container');
-            
-            // 1. 创建场景
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050709);
-            scene.fog = new THREE.FogExp2(0x050709, 0.015);
-
-            // 2. 创建相机 (透视相机，模拟真实视感)
             camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-            // 将相机摆放到斜上方，向下俯视 3D 棋盘
             camera.position.set(GRID_SIZE / 2, 22, GRID_SIZE + 4);
             camera.lookAt(GRID_SIZE / 2, 0, GRID_SIZE / 2);
-
-            // 3. 创建渲染器
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
-
-            // 4. 添加炫酷的光影
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0x00ff66, 0.8);
-            dirLight.position.set(GRID_SIZE/2, 40, GRID_SIZE/2);
-            scene.add(dirLight);
-
-            const pointLight = new THREE.PointLight(0xffffff, 0.5, 100);
-            pointLight.position.set(GRID_SIZE/2, 10, GRID_SIZE/2);
-            scene.add(pointLight);
-
-            // 5. 绘制 3D 发光网格地面
-            gridHelper = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x00ff66, 0x223322);
-            gridHelper.position.set(GRID_SIZE/2 - 0.5, 0, GRID_SIZE/2 - 0.5);
-            scene.add(gridHelper);
-
-            // 窗口大小改变时自动适应
-            window.addEventListener('resize', () => {
-                camera.aspect = container.clientWidth / container.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(container.clientWidth, container.clientHeight);
-            });
-
-            // 启动 3D 渲染动画循环
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            let light = new THREE.DirectionalLight(0xffffff, 0.5);
+            light.position.set(15, 30, 15);
+            scene.add(light);
+            let gh = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x1f272e, 0x111418);
+            gh.position.set(GRID_SIZE/2-0.5, 0, GRID_SIZE/2-0.5);
+            scene.add(gh);
             animate3D();
         }
 
-        // --- 3D 动画实时渲染帧 ---
         function animate3D() {
             requestAnimationFrame(animate3D);
-
-            // 让地图上的所有 3D 苹果转动并上下漂浮
             gemMeshGroup.forEach(mesh => {
-                mesh.rotation.y += 0.04;
+                mesh.rotation.y += 0.03;
                 mesh.position.y = 0.5 + Math.sin(Date.now() * 0.005 + mesh.position.x) * 0.1;
             });
-
-            // 如果触发 67 暴走模式，让相机微微晃动增加震撼感
-            if (activeBuff === "67MODE") {
-                camera.position.x = (GRID_SIZE / 2) + Math.sin(Date.now() * 0.01) * 0.3;
-            }
-
             renderer.render(scene, camera);
         }
 
-        // --- 开始游戏 ---
         function start3DGame() {
-            myName = document.getElementById("username-input").value.trim() || "守护者67";
             document.getElementById("login-page").style.display = "none";
             document.getElementById("game-interface").style.display = "flex";
-            
             init3DScene();
-
             client.subscribe(TOPIC_ALERTS);
             client.subscribe(TOPIC_GEMS);
-
             respawn3DPlayer();
-            generateGemsIfEmpty();
+            if(globalGems.length === 0) manualRefreshGems();
+            
+            // 启动 67 秒倒计时自动刷新器
+            setInterval(() => {
+                if(isDead) return;
+                autoRefreshCounter--;
+                document.getElementById("refresh-timer").innerText = `⏳ 下次自动刷新: ${autoRefreshCounter}s`;
+                if(autoRefreshCounter <= 0) {
+                    manualRefreshGems();
+                    autoRefreshCounter = 67;
+                }
+            }, 1000);
         }
 
-        // --- 复活玩家 / 初始化蛇数据 ---
-        function respawn3DPlayer() {
-            isDead = false;
-            mySnake.score = 0;
-            activeBuff = "none";
-            document.getElementById("death-overlay").style.display = "none";
-
-            // 初始在 3D 棋盘正中心
-            let startX = Math.floor(GRID_SIZE / 2);
-            let startZ = Math.floor(GRID_SIZE / 2);
-            mySnake.body = [
-                {x: startX, y: startZ},
-                {x: startX - 1, y: startZ},
-                {x: startX - 2, y: startZ}
-            ];
-            mySnake.dx = 1; // 默认往右走
-            mySnake.dy = 0;
-
-            updateLeaderboard();
-            startLoopEngine();
+        // --- 核心刷新函数 ---
+        function manualRefreshGems() {
+            let newGems = [];
+            for (let i = 0; i < 50; i++) { newGems.push(createNewRandomFruit()); }
+            globalGems = newGems;
+            // 通过 MQTT 同步全场，并标记为 refresh 动作
+            client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "refresh" }));
+            autoRefreshCounter = 67; // 重置计时器
         }
 
-        // --- 动态控制物理步进速度 ---
-        function startLoopEngine() {
-            if(gameLoopTimer) clearInterval(gameLoopTimer);
-            let intervalSpeed = (activeBuff === "67MODE") ? 35 : 130; // 67 暴走形态直接提速 4 倍！
-            gameLoopTimer = setInterval(gameStep, intervalSpeed);
+        function createNewRandomFruit() {
+            let rand = Math.random();
+            let config = FRUIT_TYPES[0];
+            if (rand > 0.96) config = FRUIT_TYPES[3];
+            else if (rand > 0.85) config = FRUIT_TYPES[2];
+            else if (rand > 0.65) config = FRUIT_TYPES[1];
+            return {
+                x: Math.floor(Math.random() * GRID_SIZE),
+                y: Math.floor(Math.random() * GRID_SIZE),
+                fType: config.name,
+                color: config.color,
+                score: config.score
+            };
         }
 
-        // --- 核心物理核心步进 ---
         function gameStep() {
             if (isDead) return;
-
-            // 检测 67 终极暴走彩蛋
-            if (mySnake.score >= 670 && activeBuff !== "67MODE") {
-                activeBuff = "67MODE";
-                showAnnouncement("⚡ 67维高维黑客矩阵已解锁！无限霓虹暴走激活！");
-                startLoopEngine();
-            }
-
-            // 计算新蛇头位置
             let head = { x: mySnake.body[0].x + mySnake.dx, y: mySnake.body[0].y + mySnake.dy };
+            if (head.x < 0) head.x = GRID_SIZE - 1; if (head.x >= GRID_SIZE) head.x = 0;
+            if (head.y < 0) head.y = GRID_SIZE - 1; if (head.y >= GRID_SIZE) head.y = 0;
 
-            // 3D 边界穿梭超维能力（撞墙从另一边出来）
-            if (head.x < 0) head.x = GRID_SIZE - 1;
-            if (head.x >= GRID_SIZE) head.x = 0;
-            if (head.y < 0) head.y = GRID_SIZE - 1;
-            if (head.y >= GRID_SIZE) head.y = 0;
-
-            // 自撞检测
             for (let i = 1; i < mySnake.body.length; i++) {
-                if (head.x === mySnake.body[i].x && head.y === mySnake.body[i].y) {
-                    gameOver();
-                    return;
-                }
+                if (head.x === mySnake.body[i].x && head.y === mySnake.body[i].y) { gameOver(); return; }
             }
-
             mySnake.body.unshift(head);
-
-            // 吃苹果检测
             let ate = false;
             for (let i = globalGems.length - 1; i >= 0; i--) {
-                let gem = globalGems[i];
-                if (head.x === gem.x && head.y === gem.y) {
+                if (head.x === globalGems[i].x && head.y === globalGems[i].y) {
                     ate = true;
-                    mySnake.score += (activeBuff === "67MODE" ? 67 : 10); // 暴走状态下吃一个直接暴加 67 分
+                    mySnake.score += globalGems[i].score;
                     globalGems.splice(i, 1);
-                    
-                    // 补充食物保证全图严格 50 个静态食物
-                    while (globalGems.length < 50) {
-                        globalGems.push({ x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE) });
-                    }
+                    globalGems.push(createNewRandomFruit()); // 吃一个补一个
                     client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }));
                     updateLeaderboard();
                     break;
                 }
             }
-
-            if (!ate) {
-                mySnake.body.pop();
-            }
-
-            // 更新 3D 渲染画面中的实体
+            if (!ate) mySnake.body.pop();
             render3DObjects();
         }
 
-        // --- 核心：将数据完全映射成 3D 模型 ---
         function render3DObjects() {
-            // 1. 清理上一帧的老 3D 方块
-            snakeMeshGroup.forEach(mesh => scene.remove(mesh));
+            snakeMeshGroup.forEach(m => scene.remove(m));
             snakeMeshGroup = [];
-
-            // 2. 绘制 3D 蛇身
-            mySnake.body.forEach((part, index) => {
-                // 蛇头是亮白色，身子是绿色。如果是 67 暴走形态，则会触发七彩虹霓虹变色！
-                let cubeColor = 0x00ff66;
-                if (index === 0) cubeColor = 0xffffff; // 蛇头白色
-                else if (activeBuff === "67MODE") {
-                    cubeColor = new THREE.Color(`hsl(${(Date.now() / 5 + index * 20) % 360}, 100%, 50%)`);
-                }
-
-                const geometry = new THREE.BoxGeometry(0.95, 0.95, 0.95);
-                const material = new THREE.MeshStandardMaterial({ 
-                    color: cubeColor, 
-                    roughness: 0.2, 
-                    metalness: 0.5,
-                    emissive: cubeColor,
-                    emissiveIntensity: index === 0 ? 0.6 : 0.2 
-                });
-                const mesh = new THREE.Mesh(geometry, material);
-                
-                // 将 2D 坐标映射到 3D 空间（x 轴对应 x，y 轴对应 3D 中的 z 轴）
-                mesh.position.set(part.x, 0.5, part.y);
-                scene.add(mesh);
-                snakeMeshGroup.push(mesh);
+            mySnake.body.forEach((p, i) => {
+                const geo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+                const mat = new THREE.MeshStandardMaterial({ color: i===0?0xffffff:0x00ff66, emissive: i===0?0xffffff:0x00ff66, emissiveIntensity: 0.2 });
+                const m = new THREE.Mesh(geo, mat);
+                m.position.set(p.x, 0.45, p.y);
+                scene.add(m);
+                snakeMeshGroup.push(m);
             });
 
-            // 3. 绘制 3D 食物 (只在食物数量对不上时重新生成，防止场景闪烁)
             if (gemMeshGroup.length !== globalGems.length) {
-                gemMeshGroup.forEach(mesh => scene.remove(mesh));
+                gemMeshGroup.forEach(m => scene.remove(m));
                 gemMeshGroup = [];
-
-                globalGems.forEach(gem => {
-                    // 食物用一个正八面体来做，看起来像发光的立体水晶苹果
-                    const geometry = new THREE.OctahedronGeometry(0.4, 0);
-                    const material = new THREE.MeshStandardMaterial({ 
-                        color: 0xff3366, // 霓虹红
-                        emissive: 0xff3366,
-                        emissiveIntensity: 0.5,
-                        roughness: 0.1 
-                    });
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.set(gem.x, 0.5, gem.y);
-                    scene.add(mesh);
-                    gemMeshGroup.push(mesh);
+                globalGems.forEach(g => {
+                    let geo;
+                    if(g.fType === 'banana') geo = new THREE.ConeGeometry(0.3, 0.7, 4);
+                    else if(g.fType === 'grape') geo = new THREE.SphereGeometry(0.35, 8, 8);
+                    else if(g.fType === 'fruit67') geo = new THREE.OctahedronGeometry(0.5);
+                    else geo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+                    const mat = new THREE.MeshStandardMaterial({ color: g.color, emissive: g.color, emissiveIntensity: 0.4 });
+                    const m = new THREE.Mesh(geo, mat);
+                    m.position.set(g.x, 0.5, g.y);
+                    scene.add(m);
+                    gemMeshGroup.push(m);
                 });
             }
         }
 
-        // --- 游戏结束 ---
-        function gameOver() {
-            isDead = true;
-            clearInterval(gameLoopTimer);
-            document.getElementById("ui-death-score").innerText = "最终净化积分: " + mySnake.score;
-            document.getElementById("death-overlay").style.display = "flex";
+        function respawn3DPlayer() {
+            isDead = false; mySnake.score = 0;
+            document.getElementById("death-overlay").style.display = "none";
+            mySnake.body = [{x:15,y:15},{x:14,y:15},{x:13,y:15}];
+            mySnake.dx = 1; mySnake.dy = 0;
+            if(gameLoopTimer) clearInterval(gameLoopTimer);
+            gameLoopTimer = setInterval(gameStep, 120);
+            updateLeaderboard();
         }
 
-        // --- 生成初始 50 个静态食物数据 ---
-        function generateGemsIfEmpty() {
-            if (globalGems.length === 0) {
-                let gems = [];
-                for (let i = 0; i < 50; i++) {
-                    gems.push({ x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE) });
-                }
-                globalGems = gems;
-                client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }));
-            }
-        }
+        function gameOver() { isDead = true; document.getElementById("ui-death-score").innerText = "最终积分: " + mySnake.score; document.getElementById("death-overlay").style.display = "flex"; }
+        function showAnnouncement(m) { let b = document.getElementById("kill-announcer"); b.innerText = m; b.style.display = "block"; setTimeout(()=>b.style.display="none", 3000); }
+        function updateLeaderboard() { document.getElementById("rank-list").innerHTML = `<div style="color:#00ff66; padding:10px; display:flex; justify-content:space-between;"><span>1. 玩家67</span><b>${mySnake.score}分</b></div>`; }
 
-        // --- 辅助 UI 函数 ---
-        function showAnnouncement(msg) {
-            let box = document.getElementById("kill-announcer"); box.innerText = msg; box.style.display = "block";
-            setTimeout(() => { box.style.display = "none"; }, 4000);
-        }
-
-        function updateLeaderboard() {
-            let list = [{ name: myName, score: mySnake.score }];
-            let html = "";
-            list.forEach((p, idx) => {
-                html += `<div class="rank-item" style="color:#00ff66"><span>${idx+1}. ${p.name}</span><b>${p.score}分</b></div>`;
-            });
-            document.getElementById("rank-list").innerHTML = html;
-        }
-
-        // --- 键盘事件监听（操控方向） ---
         window.addEventListener("keydown", e => {
             if (isDead) return;
-            const key = e.key.toLowerCase();
-            // 改变 3D 平面的移动方向 (由于视角向下，X轴是左右，Z轴对应键盘上的上下)
-            if ((key === 'w' || e.key === 'ArrowUp') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = -1; }
-            if ((key === 's' || e.key === 'ArrowDown') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = 1; }
-            if ((key === 'a' || e.key === 'ArrowLeft') && mySnake.dx === 0) { mySnake.dx = -1; mySnake.dy = 0; }
-            if ((key === 'd' || e.key === 'ArrowRight') && mySnake.dx === 0) { mySnake.dx = 1; mySnake.dy = 0; }
+            const k = e.key.toLowerCase();
+            if (k === 'r') manualRefreshGems(); // 按下 R 键手动刷新
+            if ((k === 'w' || e.key === 'ArrowUp') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = -1; }
+            if ((k === 's' || e.key === 'ArrowDown') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = 1; }
+            if ((k === 'a' || e.key === 'ArrowLeft') && mySnake.dx === 0) { mySnake.dx = -1; mySnake.dy = 0; }
+            if ((k === 'd' || e.key === 'ArrowRight') && mySnake.dx === 0) { mySnake.dx = 1; mySnake.dy = 0; }
         });
     </script>
 </body>
