@@ -3,425 +3,722 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 67 守护者：RPG异能觉醒版</title>
+    <title>3D 67 守护者：全向自由大乱斗</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { background-color: #050709; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow: hidden; user-select: none; }
-        #login-page { display: flex; flex-direction: column; align-items: center; background: #111418; padding: 40px; border-radius: 12px; border: 2px solid #676767; box-shadow: 0 0 30px rgba(0,255,100,0.2); width: 100%; max-width: 420px; text-align: center; box-sizing: border-box; z-index: 100; }
-        h1 { color: #00ff66; font-size: 2.6rem; margin: 0 0 5px 0; text-shadow: 0 0 15px rgba(0,255,100,0.6); }
-        .sub-title { font-size: 0.95rem; color: #aaa; margin-bottom: 30px; letter-spacing: 1px; }
-        .btn-game { background-color: #00ff66; color: #000; border: none; padding: 14px 0; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,255,100,0.3); }
+        body { background-color: #0d1117; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow: hidden; user-select: none; }
+        
+        /* 🏰 局外大厅主面板 */
+        #lobby-container { display: flex; flex-direction: column; background: #161b22; border-radius: 12px; border: 2px solid #30363d; box-shadow: 0 0 30px rgba(0,255,100,0.15); width: 100%; max-width: 480px; box-sizing: border-box; z-index: 100; max-height: 90vh; overflow: hidden; position: relative; }
+        
+        /* 🗂️ 大厅导航标签页 */
+        .lobby-tabs { display: flex; background: #0d1117; border-bottom: 2px solid #30363d; }
+        .tab-btn { flex: 1; padding: 15px 0; background: none; border: none; color: #888; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center; }
+        .tab-btn.active { color: #00ff66; border-bottom: 3px solid #00ff66; background: rgba(0,255,100,0.05); }
+        .tab-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,0.02); }
+        
+        .lobby-content { padding: 25px; box-sizing: border-box; overflow-y: auto; max-height: 60vh; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        h1 { color: #00ff66; font-size: 2rem; margin: 0 0 15px 0; text-shadow: 0 0 15px rgba(0,255,100,0.3); text-align: center; }
+        .btn-game { background-color: #00ff66; color: #000; border: none; padding: 14px 0; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,255,100,0.2); margin-top: 15px; }
         .btn-game:hover { background-color: #00cc52; transform: scale(1.02); }
         
-        #game-interface { display: none; flex-direction: row; gap: 20px; align-items: flex-start; position: relative; width: 95vw; height: 85vh; }
-        #canvas-container { flex-grow: 1; height: 100%; border: 3px solid #1f272e; border-radius: 8px; position: relative; overflow: hidden; background: #000; }
+        /* 🪙 钱包 */
+        .lobby-wallet { color: #f1c40f; font-size: 1.3rem; font-weight: bold; margin-bottom: 15px; background: #21262d; padding: 10px; border-radius: 6px; border: 1px solid #30363d; text-align: center; }
         
-        #kill-announcer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 255, 100, 0.95); color: #000; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; z-index: 100; box-shadow: 0 4px 15px rgba(0,255,100,0.4); display: none; text-align: center; min-width: 320px; }
-        #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 7, 9, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; display: none; z-index: 110; }
+        /* 🛒 商店样式 */
+        .section-title { font-size: 1rem; color: #00ff66; margin: 0 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; }
+        .item-card { display: flex; justify-content: space-between; align-items: center; background: #21262d; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #30363d; }
+        .item-name { font-size: 0.9rem; font-weight: bold; }
+        .item-price { color: #f1c40f; font-size: 0.85rem; margin-left: 5px; font-weight: bold; }
         
-        #sidebar { background: #111418; width: 300px; padding: 20px; border-radius: 8px; border: 1px solid #1f272e; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
-        #status-indicator { position: absolute; top: 15px; left: 15px; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; background: #e74c3c; font-weight: bold; z-index: 200; }
-        
-        /* 经济与商店 */
-        .shop-box { background: #1a1a1a; padding: 12px; border-radius: 6px; border: 1px solid #333; margin: 10px 0; text-align: center; }
-        .coin-display { color: #f1c40f; font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; }
-        .btn-buy { background: #e67e22; color: #fff; border: none; padding: 8px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-buy { background: #e67e22; color: #fff; border: none; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.15s; }
         .btn-buy:hover { background: #d35400; }
         .btn-buy:disabled { background: #444; color: #888; cursor: not-allowed; }
 
-        /* CD技能样式 */
-        .skill-item { display: flex; justify-content: space-between; align-items: center; background: #161b22; padding: 8px 12px; border-radius: 4px; margin-bottom: 6px; font-size: 0.85rem; border-left: 3px solid #666; }
-        .skill-item.locked { opacity: 0.4; border-left-color: #e74c3c; }
-        .skill-item.ready { border-left-color: #00ff66; }
-        .skill-item.cd { border-left-color: #ff9900; }
-        .skill-key { background: #30363d; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-weight: bold; color: #00ff66; border: 1px solid #444; }
+        .select-option { display: flex; align-items: center; background: #1f242c; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; font-size: 0.9rem; border: 1px solid #2d333b; }
+        .select-option input { margin-right: 12px; transform: scale(1.1); cursor: pointer; }
+        .select-option.locked-opt { opacity: 0.35; cursor: not-allowed; }
+
+        /* 🪐 局内层 */
+        #game-interface { display: none; flex-direction: row; gap: 20px; width: 96vw; height: 88vh; }
+        #canvas-container { flex-grow: 1; height: 100%; border: 3px solid #30363d; border-radius: 8px; position: relative; overflow: hidden; background: #253046; }
+        #kill-announcer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(231, 76, 60, 0.95); color: #fff; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; z-index: 100; display: none; text-align: center; min-width: 360px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        #sidebar { background: #161b22; width: 280px; padding: 15px; border-radius: 8px; border: 1px solid #30363d; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
+        #status-indicator { position: absolute; top: 15px; left: 15px; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; background: #e74c3c; font-weight: bold; z-index: 200; }
         
-        .fruit-legend { font-size: 0.75rem; margin-top: auto; background: #1a1a1a; padding: 8px; border-radius: 4px; border: 1px solid #333; }
+        .skill-item { display: flex; justify-content: space-between; align-items: center; background: #21262d; padding: 12px; border-radius: 4px; font-size: 0.95rem; border-left: 4px solid #00ff66; }
+        .skill-item.cd { border-left-color: #ff9900; }
+        .skill-key { background: #30363d; padding: 2px 6px; border-radius: 3px; font-weight: bold; color: #00ff66; }
+        
+        .rank-row { display: flex; justify-content: space-between; padding: 6px 4px; font-size: 0.9rem; border-bottom: 1px solid #21262d; }
     </style>
 </head>
 <body>
 
-    <div id="status-indicator">📡 正在建立高维RPG法则...</div>
+    <div id="status-indicator">📡 正在载入高维分屏整备终端...</div>
 
-    <div id="login-page">
-        <h1>3D 67 守护者矩阵</h1>
-        <div class="sub-title">[💰 100分=1金币 | 🧾 攒200金币购买圣书觉醒技能]</div>
-        <input type="text" id="username-input" style="padding:14px; margin-bottom:20px; width:100%; box-sizing:border-box; background:#1a1a1a; color:#fff; border:1px solid #333; text-align:center; border-radius:6px;" placeholder="见习守护者67" maxlength="8">
-        <button class="btn-game" onclick="start3DGame()">踏入修炼场</button>
-    </div>
+    <!-- 🏰 局外系统大厅 -->
+    <div id="lobby-container">
+        <div class="lobby-tabs">
+            <button id="tab-loadout" class="tab-btn active" onclick="switchTab('loadout')">🎒 出战整备</button>
+            <button id="tab-shop" class="tab-btn" onclick="switchTab('shop')">🛒 高维商店</button>
+        </div>
 
-    <div id="game-interface">
-        <div id="kill-announcer"></div>
-        <div id="canvas-container">
-            <div id="death-overlay">
-                <h1 style="color:#e74c3c;">转世重生</h1>
-                <p id="ui-death-score">最终积分: 0</p>
-                <button class="btn-game" style="width:200px;" onclick="respawn3DPlayer()">凝聚法身</button>
+        <div class="lobby-content">
+            <div class="lobby-wallet">🪙 高维永久资产: <span id="lobby-coins-display">1000000</span> 新币</div>
+
+            <!-- 面板 1：🎒 出战整备面板 -->
+            <div id="panel-loadout" class="panel active">
+                <h1 id="lobby-title">开放世界矩阵准备</h1>
+                
+                <div class="section-title">🔮 勾选要带入的异能 (单选)：</div>
+                <label class="select-option">
+                    <input type="radio" name="loadout-skill" value="f" checked>
+                    <span>🌀 空间刷新 (初始免费)</span>
+                </label>
+                <label class="select-option locked-opt" id="opt-skill-q">
+                    <input type="radio" name="loadout-skill" value="q" id="radio-skill-q" disabled>
+                    <span id="txt-skill-q">⚡ Q 闪现跃迁 (未在商店购买)</span>
+                </label>
+                <label class="select-option locked-opt" id="opt-skill-e">
+                    <input type="radio" name="loadout-skill" value="e" id="radio-skill-e" disabled>
+                    <span id="txt-skill-e">⏳ E 时空减速 (未在商店购买)</span>
+                </label>
+                <label class="select-option locked-opt" id="opt-skill-r">
+                    <input type="radio" name="loadout-skill" value="r" id="radio-skill-r" disabled>
+                    <span id="txt-skill-r">🔥 R 空间大招 (未在商店购买)</span>
+                </label>
+
+                <div class="section-title" style="margin-top: 20px;">🎨 勾选要穿戴的皮肤 (单选)：</div>
+                <label class="select-option">
+                    <input type="radio" name="loadout-skin" value="default" checked>
+                    <span>🟢 极简守卫者 (原生形态)</span>
+                </label>
+                <label class="select-option locked-opt" id="opt-skin-cyber">
+                    <input type="radio" name="loadout-skin" value="cyber" id="radio-skin-cyber" disabled>
+                    <span id="txt-skin-cyber">🌌 赛博霓虹 67 (未拥有)</span>
+                </label>
+                <label class="select-option locked-opt" id="opt-skin-lava">
+                    <input type="radio" name="loadout-skin" value="lava" id="radio-skin-lava" disabled>
+                    <span id="txt-skin-lava">🌋 熔岩炼狱 67 (未拥有)</span>
+                </label>
+                <label class="select-option locked-opt" id="opt-skin-gold">
+                    <input type="radio" name="loadout-skin" value="gold" id="radio-skin-gold" disabled>
+                    <span id="txt-skin-gold">👑 黄金至尊 67 (未拥有)</span>
+                </label>
+
+                <button class="btn-game" onclick="enterGameMatch()">进入自由巨图战局</button>
+            </div>
+
+            <!-- 面板 2：🛒 独立高级商店面板 -->
+            <div id="panel-shop" class="panel">
+                <h1>高维科技百货商店</h1>
+                
+                <div class="section-title">🔮 核心战术异能区 <span>均价 200</span></div>
+                <div class="item-card">
+                    <div class="item-name">⚡ 解锁 Q 闪现跃迁技能<span class="item-price">200 币</span></div>
+                    <button id="buy-skill-q" class="btn-buy" onclick="purchaseItem('skill_q', 200)">购买</button>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">⏳ 解锁 E 时空减速技能<span class="item-price">200 币</span></div>
+                    <button id="buy-skill-e" class="btn-buy" onclick="purchaseItem('skill_e', 200)">购买</button>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">🔥 解锁 R 空间大招技能<span class="item-price">200 币</span></div>
+                    <button id="buy-skill-r" class="btn-buy" onclick="purchaseItem('skill_r', 200)">购买</button>
+                </div>
+
+                <div class="section-title" style="margin-top: 20px; color: #ff9900;">🎨 蛇身流光战甲皮肤区 <span>特价 500</span></div>
+                <div class="item-card">
+                    <div class="item-name">🌌 赛博霓虹 67 <span class="item-price">500 币</span></div>
+                    <button id="buy-skin-cyber" class="btn-buy" onclick="purchaseItem('skin_cyber', 500)">购买</button>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">🌋 熔岩炼狱 67 <span class="item-price">500 币</span></div>
+                    <button id="buy-skin-lava" class="btn-buy" onclick="purchaseItem('skin_lava', 500)">购买</button>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">👑 黄金至尊 67 <span class="item-price">500 币</span></div>
+                    <button id="buy-skin-gold" class="btn-buy" onclick="purchaseItem('skin_gold', 500)">购买</button>
+                </div>
             </div>
         </div>
-        
+    </div>
+
+    <!-- 🪐 局内层面 -->
+    <div id="game-interface">
+        <div id="kill-announcer"></div>
+        <div id="canvas-container"></div>
         <div id="sidebar">
-            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 67号守护者数据</h3>
-            <div id="rank-list" style="padding: 5px 0;"></div>
+            <h3 style="margin:0; text-align:center; color:#00ff66;">🏆 巨图生存积分榜</h3>
+            <div id="rank-list" style="padding: 10px 0; flex-grow:1; overflow-y:auto;"></div>
             
-            <div class="shop-box">
-                <div class="coin-display">🪙 个人财富: <span id="ui-coins">0</span> 金币</div>
-                <button id="btn-buy-book" class="btn-buy" onclick="buySkillBook()">📖 购买守护者技能书 (200金币)</button>
-                <div id="book-status" style="font-size:0.75rem; color:#aaa; margin-top:5px;">当前状态: ❌ 未觉醒（技能锁定）</div>
+            <div id="skin-indicator" style="background:#21262d; padding:6px; border-radius:4px; text-align:center; font-size:0.8rem; margin:10px 0; border:1px solid #30363d;">
+                当前外观: 默认涂装
             </div>
 
-            <h4 style="margin: 5px 0; color: #aaa; font-size: 0.9rem;">🔮 技能冷却状态：</h4>
-            <div class="skill-item locked" id="skill-q">
-                <span>⚡ 闪现跃迁 (CD: 30s)</span>
-                <span class="skill-key" id="cd-q">Q (锁)</span>
-            </div>
-            <div class="skill-item locked" id="skill-e">
-                <span>⏳ 时空减速 (CD: 60s)</span>
-                <span class="skill-key" id="cd-e">E (锁)</span>
-            </div>
-            <div class="skill-item locked" id="skill-r">
-                <span>🔥 空间震荡毁灭 (CD: 30s)</span>
-                <span class="skill-key" id="cd-r">R (锁)</span>
-            </div>
-            <div class="skill-item locked" id="skill-f">
-                <span>🌀 强制重组水果 (CD: 60s)</span>
-                <span class="skill-key" id="cd-f">F (锁)</span>
-            </div>
+            <h4 style="margin: 5px 0; color: #aaa; font-size: 0.9rem;">🎒 本局携入异能：</h4>
+            <div id="active-skill-slot" style="margin-bottom:15px;"></div>
 
-            <div class="fruit-legend">
-                <b style="color:#00ff66;">🍏 矩阵兑换守则：</b><br>
-                100 积分 = 1 金币 🪙<br>
-                🍏+10 | 🍌+20 | 🍇+30 | ✨+67<br>
-                <span style="color:#f1c40f;">努力多吃水果，赚取 200 金币！</span>
+            <div style="font-size:0.75rem; color:#888; line-height:1.4; background:#0d1117; padding:8px; border-radius:4px; border: 1px solid #30363d;">
+                ⚠️ <b>像素级自由操控：</b><br>
+                1. 突破 $120\times120$ 的网格边界会<b>瞬间解体</b>。<br>
+                2. 头部撞击到全场任何一条蛇的身体都将直接出局！<br>
+                3. 使用 <b>A / D</b> 或 <b>方向键左右</b> 控制平滑转向，可像贪吃蛇一样随意漂移滑行。
             </div>
         </div>
     </div>
 
     <script>
         const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        let TOPIC_GEMS = `ecoguardians/3drpg67/gems`;
+        let TOPIC_GEMS = `ecoguardians/3dskin67/fruits_huge`;
         
-        const GRID_SIZE = 30; 
-        let mySnake = { body: [], dx: 1, dy: 0, score: 0 };
+        // 🌍 超大开放式巨型地图：120 x 120
+        const MAP_SIZE = 120;
+        
+        let mySnake = { name: "守护者67 (你)", body: [], angle: 0, speed: 0.22, score: 0, isDead: true };
+        let ais = []; 
         let globalGems = [];
-        let isDead = false;
+        let isDead = true;
         let gameLoopTimer = null;
-        
-        // RPG 与 商店机制变量
-        let myCoins = 0;
-        let isBookUnlocked = false; // 是否买下了技能书
 
-        // 独立冷却时间控制系统 (单位：秒)
-        let cdTimers = { q: 0, e: 0, r: 0, f: 0 };
+        if (localStorage.getItem('g67_coins_v3') === null) {
+            localStorage.setItem('g67_coins_v3', '1000000');
+        }
+        let globalCoins = parseInt(localStorage.getItem('g67_coins_v3'));
+
+        let inventory = JSON.parse(localStorage.getItem('g67_inventory_v3')) || {
+            skill_q: false, skill_e: false, skill_r: false,
+            skin_cyber: false, skin_lava: false, skin_gold: false
+        };
+
+        let currentCarriedSkill = 'f';
+        let currentEquippedSkin = 'default';
+        let activeSkillCD = 0;
         let isTimeDilationActive = false;
 
         let forceRebuildMeshTrigger = false;
         let scene, camera, renderer;
-        let snakeMeshGroup = []; 
-        let gemMeshGroup = [];   
+        let snakeMeshGroup = []; let gemMeshGroup = [];
 
+        // 🕹️ 用于实现流畅连续曲线转向的按键池
+        let keysPressed = {};
+
+        // 3D 几何体模型
+        const snakeHeadGeo = new THREE.SphereGeometry(0.55, 24, 24);
+        const snakeBodyGeo = new THREE.SphereGeometry(0.46, 12, 12);
+        const eyeGeo = new THREE.SphereGeometry(0.12, 8, 8);
+        const fruitGeo = new THREE.SphereGeometry(0.35, 16, 16); // 水果模型
+
+        // 🍓 真正的多样化水果资源设定
         const FRUIT_TYPES = [
-            { name: 'apple', color: 0x2ecc71, score: 10 },
-            { name: 'banana', color: 0xf1c40f, score: 20 },
-            { name: 'grape', color: 0x9b59b6, score: 30 },
-            { name: 'fruit67', color: 0xe67e22, score: 67 }
+            { name: '红苹果', color: 0xff3333, score: 10 },
+            { name: '黄香蕉', color: 0xffd700, score: 20 },
+            { name: '紫葡萄', color: 0x9b59b6, score: 30 },
+            { name: '67号神圣核心果', color: 0x00ffff, score: 67 }
+        ];
+
+        const SKIN_COLOR_MAP = {
+            default: { head: 0xffffff, body: 0x00ff66, eye: 0x00fffa },
+            cyber: { head: 0x00ffff, body: 0xff00ff, eye: 0xffffff },
+            lava: { head: 0xff3300, body: 0xffaa00, eye: 0xffff00 },
+            gold: { head: 0xffea00, body: 0xd4af37, eye: 0xffffff }
+        };
+
+        // 🤫 完美抹除AI标识，模拟全服精英真实排位昵称
+        const AI_SKINS = [
+            { name: "暗夜星云_Shadow", head: 0xe74c3c, body: 0xc0392b, eye: 0xffffff },
+            { name: "不灭流光_Alpha", head: 0x9b59b6, body: 0x8e44ad, eye: 0x00ffff },
+            { name: "九幽巨蟒_Vortex", head: 0x34495e, body: 0x2c3e50, eye: 0xff0000 },
+            { name: "极速幻影_Mirage", head: 0xe67e22, body: 0xd35400, eye: 0xffffff },
+            { name: "狂暴飓风_Storm", head: 0x3498db, body: 0x2980b9, eye: 0x00ff66 }
         ];
 
         client.on('connect', () => {
             document.getElementById("status-indicator").style.backgroundColor = "#00ff66";
             document.getElementById("status-indicator").style.color = "#000";
-            document.getElementById("status-indicator").innerText = "🟢 守护者RPG法则载入完毕";
+            document.getElementById("status-indicator").innerText = "🟢 高维超大世界战区群组联通";
+            updateLobbyAndShopUI();
         });
 
         client.on('message', (topic, message) => {
             try {
                 let data = JSON.parse(message.toString());
-                if (topic === TOPIC_GEMS) { 
-                    globalGems = data.gems || []; 
-                    forceRebuildMeshTrigger = true; 
-                    if(data.reason === "refresh") showAnnouncement("🌀 水果星阵已强制打散重组！");
-                }
+                if (topic === TOPIC_GEMS) { globalGems = data.gems || []; forceRebuildMeshTrigger = true; }
             } catch(e){}
         });
 
-        // 购买技能书函数
-        function buySkillBook() {
-            if (myCoins >= 200 && !isBookUnlocked) {
-                myCoins -= 200;
-                isBookUnlocked = true;
-                document.getElementById("ui-coins").innerText = myCoins;
-                document.getElementById("book-status").innerText = "👑 状态: 已觉醒（技能解锁成功！）";
-                document.getElementById("book-status").style.color = "#00ff66";
-                document.getElementById("btn-buy-book").disabled = true;
-                document.getElementById("btn-buy-book").innerText = "🔮 已经掌握终极奥义";
-                
-                // 刷新全技能状态栏样式
-                ['q','e','r','f'].forEach(k => {
-                    let el = document.getElementById(`skill-${k}`);
-                    el.classList.remove("locked");
-                    el.classList.add("ready");
-                    document.getElementById(`cd-${k}`).innerText = k.toUpperCase();
-                });
-                showAnnouncement("📖 成功修成《67号守护者专属技能书》！异能全部觉醒！");
-            } else if (myCoins < 200) {
-                showAnnouncement("❌ 金币不足 200！请继续吞噬水果转化财富。");
+        function switchTab(tabName) {
+            document.getElementById('tab-loadout').classList.remove('active');
+            document.getElementById('tab-shop').classList.remove('active');
+            document.getElementById('panel-loadout').classList.remove('active');
+            document.getElementById('panel-shop').classList.remove('active');
+
+            if (tabName === 'shop') {
+                document.getElementById('tab-shop').classList.add('active');
+                document.getElementById('panel-shop').classList.add('active');
+            } else {
+                document.getElementById('tab-loadout').classList.add('active');
+                document.getElementById('panel-loadout').classList.add('active');
             }
         }
 
-        // CD 秒表计数器逻辑（每秒跑一次）
-        setInterval(() => {
-            if (isDead || !isBookUnlocked) return;
-            
-            ['q', 'e', 'r', 'f'].forEach(k => {
-                if (cdTimers[k] > 0) {
-                    cdTimers[k]--;
-                    let el = document.getElementById(`skill-${k}`);
-                    let keyEl = document.getElementById(`cd-${k}`);
-                    
-                    if (cdTimers[k] === 0) {
-                        el.classList.remove("cd");
-                        el.classList.add("ready");
-                        keyEl.innerText = k.toUpperCase();
-                    } else {
-                        keyEl.innerText = `${cdTimers[k]}s`;
-                    }
+        function updateLobbyAndShopUI() {
+            document.getElementById("lobby-coins-display").innerText = globalCoins;
+            localStorage.setItem('g67_coins_v3', globalCoins);
+            localStorage.setItem('g67_inventory_v3', JSON.stringify(inventory));
+
+            [['q','skill_q','⚡ Q 闪现跃迁 (已解锁)'], ['e','skill_e','⏳ E 时空减速 (已解锁)'], ['r','skill_r','🔥 R 空间大招 (已解锁)']].forEach(arr => {
+                let key = arr[0], invKey = arr[1], textStr = arr[2];
+                let btn = document.getElementById(`buy-skill-${key}`);
+                if (inventory[invKey]) {
+                    btn.disabled = true; btn.innerText = "已解锁"; btn.style.background = "#2ea44f";
+                    document.getElementById(`radio-skill-${key}`).disabled = false;
+                    document.getElementById(`opt-skill-${key}`).classList.remove("locked-opt");
+                    document.getElementById(`txt-skill-${key}`).innerText = textStr;
+                } else {
+                    btn.disabled = (globalCoins < 200); btn.innerText = "购买 (200)";
                 }
             });
-        }, 1000);
+
+            [['cyber','skin_cyber','🌌 赛博霓虹 67 (已拥有)'], ['lava','skin_lava','🌋 熔岩炼狱 67 (已拥有)'], ['gold','skin_gold','👑 黄金至尊 67 (已拥有)']].forEach(arr => {
+                let key = arr[0], invKey = arr[1], textStr = arr[2];
+                let btn = document.getElementById(`buy-skin-${key}`);
+                if (inventory[invKey]) {
+                    btn.disabled = true; btn.innerText = "已拥有"; btn.style.background = "#2ea44f";
+                    document.getElementById(`radio-skin-${key}`).disabled = false;
+                    document.getElementById(`opt-skin-${key}`).classList.remove("locked-opt");
+                    document.getElementById(`txt-skin-${key}`).innerText = textStr;
+                } else {
+                    btn.disabled = (globalCoins < 500); btn.innerText = "购买 (500)";
+                }
+            });
+        }
+
+        function purchaseItem(itemKey, price) {
+            if (globalCoins >= price && !inventory[itemKey]) {
+                globalCoins -= price;
+                inventory[itemKey] = true;
+                updateLobbyAndShopUI();
+            }
+        }
+
+        function enterGameMatch() {
+            const skillRadios = document.getElementsByName('loadout-skill');
+            for (let i = 0; i < skillRadios.length; i++) {
+                if (skillRadios[i].checked) { currentCarriedSkill = skillRadios[i].value; break; }
+            }
+            const skinRadios = document.getElementsByName('loadout-skin');
+            for (let i = 0; i < skinRadios.length; i++) {
+                if (skinRadios[i].checked) { currentEquippedSkin = skinRadios[i].value; break; }
+            }
+
+            document.getElementById("lobby-container").style.display = "none";
+            document.getElementById("game-interface").style.display = "flex";
+
+            init3DScene();
+
+            let skinNames = { default: "🟢 极简原生形态", cyber: "🌌 赛博霓虹 67", lava: "🌋 熔岩炼狱 67", gold: "👑 黄金至尊 67" };
+            document.getElementById("skin-indicator").innerText = "当前战甲: " + skinNames[currentEquippedSkin];
+
+            let skillNames = { f:"🌀 空间刷新", q:"⚡ 闪现跃迁", e:"⏳ 时空减速", r:"🔥 空间大招" };
+            document.getElementById("active-skill-slot").innerHTML = `
+                <div class="skill-item" id="局内技能卡">
+                    <span>${skillNames[currentCarriedSkill]}</span>
+                    <span class="skill-key" id="局内技能CD">${currentCarriedSkill.toUpperCase()}</span>
+                </div>
+            `;
+
+            client.subscribe(TOPIC_GEMS);
+            respawnGameSession();
+            if (globalGems.length === 0) manualRefreshFruits();
+        }
 
         function init3DScene() {
             const container = document.getElementById('canvas-container');
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050709);
+            if (renderer) return;
+            scene = new THREE.Scene(); 
+            scene.background = new THREE.Color(0x111622); 
+
             camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(GRID_SIZE / 2, 20, GRID_SIZE + 2);
-            camera.lookAt(GRID_SIZE / 2, 0, GRID_SIZE / 2);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
             
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            let light = new THREE.DirectionalLight(0xffffff, 0.6);
-            light.position.set(10, 25, 20);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8)); 
+            let light = new THREE.DirectionalLight(0xffffff, 2.0); 
+            light.position.set(MAP_SIZE/2, 50, MAP_SIZE/2); 
             scene.add(light);
             
-            let gh = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x1f272e, 0x111418);
-            gh.position.set(GRID_SIZE/2-0.5, 0, GRID_SIZE/2-0.5);
+            // 🗺️ 搭建超级庞大的全向网格矩阵
+            let gh = new THREE.GridHelper(MAP_SIZE, MAP_SIZE, 0x00ff66, 0x223147); 
+            gh.position.set(MAP_SIZE/2, 0, MAP_SIZE/2); 
             scene.add(gh);
-            animate3D();
+            
+            startLoopEngine();
         }
 
-        function animate3D() {
-            requestAnimationFrame(animate3D);
-            gemMeshGroup.forEach(group => {
-                group.rotation.y += isTimeDilationActive ? 0.005 : 0.025;
-                group.position.y = 0.5 + Math.sin(Date.now() * 0.004 + group.position.x) * 0.08;
-            });
-            renderer.render(scene, camera);
+        function castActiveSkill(k) {
+            if (k !== currentCarriedSkill || activeSkillCD > 0 || mySnake.isDead) return;
+
+            if (currentCarriedSkill === 'f') {
+                activeSkillCD = 30; setCDUI(); manualRefreshFruits();
+            } else if (currentCarriedSkill === 'q') {
+                activeSkillCD = 15; setCDUI();
+                showAnnouncement("⚡ 瞬移迁跃：蛇头高速破空推进！");
+                let head = mySnake.body[0];
+                for (let i=0; i<18; i++) {
+                    let nextX = head.x + Math.cos(mySnake.angle) * 0.35;
+                    let nextZ = head.z + Math.sin(mySnake.angle) * 0.35;
+                    mySnake.body.unshift({x: nextX, z: nextZ});
+                    mySnake.body.pop();
+                }
+            } else if (currentCarriedSkill === 'e') {
+                activeSkillCD = 35; setCDUI(); isTimeDilationActive = true;
+                showAnnouncement("⏳ 时空缓速：全服滑行动作放慢！");
+                setTimeout(() => { isTimeDilationActive = false; }, 5000);
+            } else if (currentCarriedSkill === 'r') {
+                activeSkillCD = 25; setCDUI(); showAnnouncement("🔥 能量狂飙：斩获特殊奖励 +150积分！");
+                mySnake.score += 150; updateScoreExchange(); updateLeaderboard();
+            }
         }
 
-        function start3DGame() {
-            document.getElementById("login-page").style.display = "none";
-            document.getElementById("game-interface").style.display = "flex";
-            init3DScene();
-            client.subscribe(TOPIC_GEMS);
-            respawn3DPlayer();
-            if(globalGems.length === 0) manualRefreshGems();
+        function setCDUI() {
+            document.getElementById("局内技能卡").className = "skill-item cd";
+            document.getElementById("局内技能CD").innerText = `${activeSkillCD}s`;
         }
+
+        setInterval(() => {
+            if (mySnake.isDead || activeSkillCD <= 0) return;
+            activeSkillCD--;
+            let cdEl = document.getElementById("局内技能CD");
+            if (activeSkillCD === 0) {
+                document.getElementById("局内技能卡").className = "skill-item";
+                if(cdEl) cdEl.innerText = currentCarriedSkill.toUpperCase();
+            } else {
+                if(cdEl) cdEl.innerText = `${activeSkillCD}s`;
+            }
+        }, 1000);
 
         function startLoopEngine() {
-            if(gameLoopTimer) clearInterval(gameLoopTimer);
-            let currentSpeed = isTimeDilationActive ? 360 : 120;
-            gameLoopTimer = setInterval(gameStep, currentSpeed);
-        }
-
-        // --- 施放 Q 技能：30秒 CD ---
-        function castSkillQ() {
-            if(!isBookUnlocked || cdTimers.q > 0 || isDead) return;
-            cdTimers.q = 30; // 30秒CD
-            setSkillCDStyle('q');
-            showAnnouncement("⚡ 闪现突进 3 格！");
-            
-            for(let step = 0; step < 3; step++) {
-                let nextHead = { x: mySnake.body[0].x + mySnake.dx, y: mySnake.body[0].y + mySnake.dy };
-                if (nextHead.x < 0) nextHead.x = GRID_SIZE - 1;
-                if (nextHead.x >= GRID_SIZE) nextHead.x = 0;
-                if (nextHead.y < 0) nextHead.y = GRID_SIZE - 1;
-                if (nextHead.y >= GRID_SIZE) nextHead.y = 0;
-                mySnake.body.unshift(nextHead);
-                checkEatingAndGrowth(nextHead);
+            if(gameLoopTimer) cancelAnimationFrame(gameLoopTimer);
+            function run() {
+                gameStep();
+                gameLoopTimer = requestAnimationFrame(run);
             }
+            gameLoopTimer = requestAnimationFrame(run);
+        }
+
+        // 🕹️ 核心全向平滑物理引擎：打破格子束缚，允许任意角度微调
+        function gameStep() {
+            if (mySnake.isDead) return;
+
+            // 1. 根据键盘输入（A/D或左右键）进行微积分平滑转向
+            let turnSpeed = 0.06; 
+            if (keysPressed['a'] || keysPressed['arrowleft']) mySnake.angle -= turnSpeed;
+            if (keysPressed['d'] || keysPressed['arrowright']) mySnake.angle += turnSpeed;
+
+            // 2. 连续推行计算（蛇随心所欲滑行）
+            let curSpeed = isTimeDilationActive ? mySnake.speed * 0.5 : mySnake.speed;
+            let head = mySnake.body[0];
+            let nextX = head.x + Math.cos(mySnake.angle) * curSpeed;
+            let nextZ = head.z + Math.sin(mySnake.angle) * curSpeed;
+            let newHead = { x: nextX, z: nextZ };
+
+            // 💥 死亡检测：碰壁或者撞到全场任何人蛇身
+            if (checkBoundaryOrDeath(newHead) || checkBodyCollisionWithAll(newHead, "player", 6)) {
+                gameOver();
+                return;
+            }
+
+            // 平滑插入新头部
+            mySnake.body.unshift(newHead);
+            checkEatingAndGrowth(mySnake, true);
+
+            // 3. 🤖 驱动 5 名隐藏身份的玩家进行平滑全向搜寻水果
+            ais.forEach((ai) => {
+                if (ai.isDead) return;
+                
+                runAISmartTracking(ai); // 自动规避碰撞并抢水果
+                
+                let aiCurSpeed = isTimeDilationActive ? ai.speed * 0.45 : ai.speed;
+                let aiHead = ai.body[0];
+                let aiNextX = aiHead.x + Math.cos(ai.angle) * aiCurSpeed;
+                let aiNextZ = aiHead.z + Math.sin(ai.angle) * aiCurSpeed;
+                let aiNewHead = { x: aiNextX, z: aiNextZ };
+
+                if (checkBoundaryOrDeath(aiNewHead) || checkBodyCollisionWithAll(aiNewHead, ai.name, 5)) {
+                    ai.isDead = true;
+                    showAnnouncement(`💥 竞争者 [${ai.name}] 不慎发生撞击，当场解体！`);
+                    setTimeout(() => respawnSingleAI(ai), 4000);
+                } else {
+                    ai.body.unshift(aiNewHead);
+                    checkEatingAndGrowth(ai, false);
+                }
+            });
+
+            // 4. 🎥 摄像机丝滑高空动态追随
+            camera.position.set(mySnake.body[0].x, 28, mySnake.body[0].z + 14);
+            camera.lookAt(mySnake.body[0].x, 0, mySnake.body[0].z);
+
             render3DObjects();
-        }
-
-        // --- 施放 E 技能：60秒 CD ---
-        function castSkillE() {
-            if(!isBookUnlocked || cdTimers.e > 0 || isDead) return;
-            cdTimers.e = 60; // 60秒CD
-            setSkillCDStyle('e');
-            isTimeDilationActive = true;
-            startLoopEngine();
-            showAnnouncement("⏳ 时空撕裂！慢动作维持 5 秒！");
-            
-            // 5秒后强制恢复
-            setTimeout(() => {
-                isTimeDilationActive = false;
-                startLoopEngine();
-                showAnnouncement("⏳ 时空流速恢复正常。");
-            }, 5000);
-        }
-
-        // --- 施放 R 技能：30秒 CD ---
-        function castSkillR() {
-            if(!isBookUnlocked || cdTimers.r > 0 || isDead) return;
-            cdTimers.r = 30; // 30秒CD
-            setSkillCDStyle('r');
-            showAnnouncement("🔥 轰天大招：释放空间震荡波！额外加150分！");
-            mySnake.score += 150;
             updateLeaderboard();
         }
 
-        // --- 施放 F 技能（刷新）：60秒 CD ---
-        function castSkillF() {
-            if(!isBookUnlocked || cdTimers.f > 0 || isDead) return;
-            cdTimers.f = 60; // 刷新CD是60秒
-            setSkillCDStyle('f');
-            manualRefreshGems();
+        function checkBoundaryOrDeath(pos) {
+            return (pos.x < 0 || pos.x >= MAP_SIZE || pos.z < 0 || pos.z >= MAP_SIZE);
         }
 
-        function setSkillCDStyle(k) {
-            let el = document.getElementById(`skill-${k}`);
-            el.classList.remove("ready");
-            el.classList.add("cd");
-            document.getElementById(`cd-${k}`).innerText = `${cdTimers[k]}s`;
+        // 精准的像素圆形包围盒体积判定
+        function checkBodyCollisionWithAll(head, ownerName, ignoreCount) {
+            if (!mySnake.isDead) {
+                let start = (ownerName === "player") ? ignoreCount : 0;
+                for (let i = start; i < mySnake.body.length; i++) {
+                    let dx = head.x - mySnake.body[i].x;
+                    let dz = head.z - mySnake.body[i].z;
+                    if (dx*dx + dz*dz < 0.35) return true;
+                }
+            }
+            for (let a = 0; a < ais.length; a++) {
+                let ai = ais[a];
+                if (ai.isDead) continue;
+                let start = (ownerName === ai.name) ? ignoreCount : 0;
+                for (let i = start; i < ai.body.length; i++) {
+                    let dx = head.x - ai.body[i].x;
+                    let dz = head.z - ai.body[i].z;
+                    if (dx*dx + dz*dz < 0.35) return true;
+                }
+            }
+            return false;
         }
 
-        function manualRefreshGems() {
-            let newGems = [];
-            for (let i = 0; i < 50; i++) { newGems.push(createNewRandomFruit()); }
-            globalGems = newGems;
-            forceRebuildMeshTrigger = true; 
-            client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "refresh" }));
-        }
+        // 🤖 高仿真平滑追踪避障AI
+        function runAISmartTracking(ai) {
+            let head = ai.body[0];
+            
+            // 锁定地图上最近的水果
+            let targetFruit = globalGems[0];
+            let minDist = 99999;
+            globalGems.forEach(g => {
+                let dx = g.x - head.x; let dz = g.z - head.z;
+                let d = dx*dx + dz*dz;
+                if (d < minDist) { minDist = d; targetFruit = g; }
+            });
 
-        function createNewRandomFruit() {
-            let rand = Math.random();
-            let config = FRUIT_TYPES[0];
-            if (rand > 0.95) config = FRUIT_TYPES[3];
-            else if (rand > 0.80) config = FRUIT_TYPES[2];
-            else if (rand > 0.55) config = FRUIT_TYPES[1];
-            return { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE), fType: config.name, color: config.color, score: config.score };
-        }
-
-        function gameStep() {
-            if (isDead) return;
-            let head = { x: mySnake.body[0].x + mySnake.dx, y: mySnake.body[0].y + mySnake.dy };
-            if (head.x < 0) head.x = GRID_SIZE - 1; if (head.x >= GRID_SIZE) head.x = 0;
-            if (head.y < 0) head.y = GRID_SIZE - 1; if (head.y >= GRID_SIZE) head.y = 0;
-
-            for (let i = 1; i < mySnake.body.length; i++) {
-                if (head.x === mySnake.body[i].x && head.y === mySnake.body[i].y) { gameOver(); return; }
+            let idealAngle = ai.angle;
+            if (targetFruit) {
+                idealAngle = Math.atan2(targetFruit.z - head.z, targetFruit.x - head.x);
             }
 
-            mySnake.body.unshift(head);
-            checkEatingAndGrowth(head);
-            render3DObjects();
+            // 前瞻危险测距
+            let testX = head.x + Math.cos(idealAngle) * 2.5;
+            let testZ = head.z + Math.sin(idealAngle) * 2.5;
+            if (checkBoundaryOrDeath({x: testX, z: testZ}) || checkBodyCollisionWithAll({x: testX, z: testZ}, ai.name, 3)) {
+                idealAngle += 0.85; // 紧急反向偏转走位
+            }
+
+            let angleDiff = idealAngle - ai.angle;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            ai.angle += angleDiff * 0.12; // 平滑打方向盘
         }
 
-        function checkEatingAndGrowth(headPos) {
-            let ate = false;
-            for (let i = globalGems.length - 1; i >= 0; i--) {
-                if (headPos.x === globalGems[i].x && headPos.y === globalGems[i].y) {
-                    ate = true;
-                    mySnake.score += globalGems[i].score;
-                    
-                    // 💰 积分转换金币算术核心：100 分 = 1 金币
-                    myCoins = Math.floor(mySnake.score / 100);
-                    document.getElementById("ui-coins").innerText = myCoins;
+        let lastExchangedScore = 0;
+        function updateScoreExchange() {
+            let total = Math.floor(mySnake.score / 100);
+            let diff = total - Math.floor(lastExchangedScore / 100);
+            if (diff > 0) { globalCoins += diff; lastExchangedScore = mySnake.score; updateLobbyAndShopUI(); }
+        }
 
-                    globalGems.splice(i, 1);
-                    globalGems.push(createNewRandomFruit()); 
-                    forceRebuildMeshTrigger = true; 
-                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems, reason: "eat" }));
-                    updateLeaderboard();
+        function checkEatingAndGrowth(snakeObj, isPlayer) {
+            let head = snakeObj.body[0];
+            for (let i = globalGems.length - 1; i >= 0; i--) {
+                let dx = head.x - globalGems[i].x;
+                let dz = head.z - globalGems[i].z;
+                if (dx*dx + dz*dz < 1.1) { // 水果吃货判定半径
+                    snakeObj.score += globalGems[i].score; 
+                    if (isPlayer) updateScoreExchange();
+                    
+                    globalGems.splice(i, 1); 
+                    globalGems.push(createNewRandomFruit());
+                    forceRebuildMeshTrigger = true;
+                    client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }));
                     break;
                 }
             }
-            if (!ate) mySnake.body.pop();
+            
+            // 基于分数平滑限制蛇尾长度
+            let targetLength = 10 + Math.floor(snakeObj.score / 15);
+            if (snakeObj.body.length > targetLength) {
+                snakeObj.body.pop();
+            }
         }
 
-        function createFruit3DModel(type, colorHex) {
-            const fruitGroup = new THREE.Group();
-            if (type === 'apple') {
-                fruitGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2 })));
-            } else if (type === 'banana') {
-                const bGroup = new THREE.Group(); const pMat = new THREE.MeshStandardMaterial({ color: colorHex });
-                const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2), pMat); p.rotation.z = 0.5; bGroup.add(p);
-                fruitGroup.add(bGroup);
-            } else if (type === 'grape') {
-                const gMat = new THREE.MeshStandardMaterial({ color: colorHex });
-                const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), gMat); b.position.set(-0.08,0,0); fruitGroup.add(b);
-            } else if (type === 'fruit67') {
-                fruitGroup.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.6 })));
-            }
-            return fruitGroup;
+        function createNewRandomFruit() {
+            let r = Math.random(); let c = FRUIT_TYPES[0];
+            if (r > 0.95) c = FRUIT_TYPES[3]; else if (r > 0.8) c = FRUIT_TYPES[2]; else if (r > 0.5) c = FRUIT_TYPES[1];
+            return { x: Math.random() * (MAP_SIZE - 4) + 2, z: Math.random() * (MAP_SIZE - 4) + 2, color: c.color, score: c.score };
         }
 
         function render3DObjects() {
-            snakeMeshGroup.forEach(m => scene.remove(m));
-            snakeMeshGroup = [];
-            mySnake.body.forEach((p, i) => {
-                let sColor = i===0 ? 0xffffff : (isTimeDilationActive ? 0x00ffff : 0x00ff66);
-                const m = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: sColor, emissive: sColor, emissiveIntensity: 0.1 }));
-                m.position.set(p.x, 0.45, p.y); scene.add(m); snakeMeshGroup.push(m);
+            // 清理旧网格
+            snakeMeshGroup.forEach(m => scene.remove(m)); snakeMeshGroup = [];
+            
+            // 绘制玩家平滑蛇身
+            if (!mySnake.isDead) {
+                let colors = SKIN_COLOR_MAP[currentEquippedSkin] || SKIN_COLOR_MAP.default;
+                drawSingleSnakeMesh(mySnake.body, colors, mySnake.angle);
+            }
+
+            // 绘制全场对手平滑蛇身
+            ais.forEach((ai, index) => {
+                if (ai.isDead) return;
+                let colors = AI_SKINS[index];
+                drawSingleSnakeMesh(ai.body, colors, ai.angle);
             });
 
+            // 重新渲染水果集群
             if (forceRebuildMeshTrigger || gemMeshGroup.length !== globalGems.length) {
                 gemMeshGroup.forEach(m => scene.remove(m)); gemMeshGroup = [];
                 globalGems.forEach(g => {
-                    const fruitMesh = createFruit3DModel(g.fType, g.color);
-                    fruitMesh.position.set(g.x, 0.5, g.y); scene.add(fruitMesh); gemMeshGroup.push(fruitMesh);
+                    const fruitMat = new THREE.MeshStandardMaterial({ 
+                        color: g.color, roughness: 0.1, metalness: 0.2, emissive: g.color, emissiveIntensity: 0.3
+                    });
+                    const mesh = new THREE.Mesh(fruitGeo, fruitMat);
+                    mesh.position.set(g.x, 0.4, g.z);
+                    scene.add(mesh); gemMeshGroup.push(mesh);
                 });
-                forceRebuildMeshTrigger = false; 
+                forceRebuildMeshTrigger = false;
             }
         }
 
-        function respawn3DPlayer() {
-            isDead = false; mySnake.score = 0; myCoins = 0; isBookUnlocked = false; isTimeDilationActive = false;
-            document.getElementById("btn-buy-book").disabled = false;
-            document.getElementById("btn-buy-book").innerText = "📖 购买守护者技能书 (200金币)";
-            document.getElementById("book-status").innerText = "当前状态: ❌ 未觉醒（技能锁定）";
-            document.getElementById("book-status").style.color = "#aaa";
-            document.getElementById("ui-coins").innerText = 0;
-            ['q','e','r','f'].forEach(k => {
-                let el = document.getElementById(`skill-${k}`);
-                el.className = "skill-item locked";
-                document.getElementById(`cd-${k}`).innerText = `${k.toUpperCase()} (锁)`;
-                cdTimers[k] = 0;
+        function drawSingleSnakeMesh(bodyArr, colors, angle) {
+            bodyArr.forEach((p, i) => {
+                // 每隔2个节点抽样渲染，保障千元机也不会产生渲染卡顿
+                if (i > 0 && i % 2 !== 0) return; 
+                let isHead = (i === 0);
+                let targetColor = isHead ? colors.head : colors.body;
+                
+                const mat = new THREE.MeshStandardMaterial({ color: targetColor, roughness: 0.1, metalness: 0.5 });
+                const m = new THREE.Mesh(isHead ? snakeHeadGeo : snakeBodyGeo, mat);
+                m.position.set(p.x, 0.5, p.z);
+                scene.add(m); snakeMeshGroup.push(m);
+
+                if (isHead) {
+                    let lookX = Math.cos(angle); let lookZ = Math.sin(angle);
+                    const eyeMat = new THREE.MeshStandardMaterial({ color: colors.eye, emissive: colors.eye, emissiveIntensity: 1.2 });
+                    
+                    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                    leftEye.position.set(p.x + lookX*0.38 - lookZ*0.25, 0.65, p.z + lookZ*0.38 + lookX*0.25);
+                    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                    rightEye.position.set(p.x + lookX*0.38 + lookZ*0.25, 0.65, p.z + lookZ*0.38 - lookX*0.25);
+                    
+                    scene.add(leftEye); scene.add(rightEye);
+                    snakeMeshGroup.push(leftEye); snakeMeshGroup.push(rightEye);
+                }
             });
-            document.getElementById("death-overlay").style.display = "none";
-            mySnake.body = [{x:15,y:15},{x:14,y:15},{x:13,y:15}];
-            mySnake.dx = 1; mySnake.dy = 0; updateLeaderboard(); startLoopEngine();
         }
 
-        function gameOver() { isDead = true; clearInterval(gameLoopTimer); document.getElementById("ui-death-score").innerText = "最终积分: " + mySnake.score + " (金币: " + myCoins + ")"; document.getElementById("death-overlay").style.display = "flex"; }
-        function showAnnouncement(m) { let b = document.getElementById("kill-announcer"); b.innerText = m; b.style.display = "block"; setTimeout(()=>b.style.display="none", 2500); }
-        function updateLeaderboard() { document.getElementById("rank-list").innerHTML = `<div style="color:#00ff66; font-size:1.1rem; display:flex; justify-content:space-between;"><span>1. 守护者67</span><b>${mySnake.score}分</b></div>`; }
+        function manualRefreshFruits() {
+            let arr = []; 
+            // 水果刷新总数提高至 180 个，保障大地图处处都有物资
+            for (let i = 0; i < 180; i++) { 
+                let r = Math.random(); let c = FRUIT_TYPES[0];
+                if (r > 0.95) c = FRUIT_TYPES[3]; else if (r > 0.8) c = FRUIT_TYPES[2]; else if (r > 0.5) c = FRUIT_TYPES[1];
+                arr.push({ x: Math.random() * (MAP_SIZE - 4) + 2, z: Math.random() * (MAP_SIZE - 4) + 2, color: c.color, score: c.score });
+            }
+            globalGems = arr; forceRebuildMeshTrigger = true;
+            client.publish(TOPIC_GEMS, JSON.stringify({ gems: globalGems }));
+        }
 
+        function respawnGameSession() {
+            mySnake.isDead = false; mySnake.score = 0; lastExchangedScore = 0; isTimeDilationActive = false; activeSkillCD = 0;
+            
+            let startX = Math.random() * 40 + 40;
+            let startZ = Math.random() * 40 + 40;
+            mySnake.angle = Math.random() * Math.PI * 2;
+            mySnake.body = [];
+            for(let i=0; i<16; i++) {
+                mySnake.body.push({x: startX - Math.cos(mySnake.angle)*i*0.25, z: startZ - Math.sin(mySnake.angle)*i*0.25});
+            }
+            
+            ais = [];
+            for (let i = 0; i < 5; i++) {
+                let aiX = Math.random() * (MAP_SIZE - 20) + 10;
+                let aiZ = Math.random() * (MAP_SIZE - 20) + 10;
+                let aiAngle = Math.random() * Math.PI * 2;
+                let aiBody = [];
+                for(let j=0; j<14; j++) {
+                    aiBody.push({x: aiX - Math.cos(aiAngle)*j*0.25, z: aiZ - Math.sin(aiAngle)*j*0.25});
+                }
+                ais.push({
+                    name: AI_SKINS[i].name,
+                    body: aiBody,
+                    angle: aiAngle, speed: 0.18, score: 0, isDead: false
+                });
+            }
+
+            updateLeaderboard();
+        }
+
+        function respawnSingleAI(aiObj) {
+            if (!mySnake.isDead) {
+                let aiX = Math.random() * (MAP_SIZE - 20) + 10;
+                let aiZ = Math.random() * (MAP_SIZE - 20) + 10;
+                aiObj.angle = Math.random() * Math.PI * 2;
+                let aiBody = [];
+                for(let j=0; j<14; j++) {
+                    aiBody.push({x: aiX - Math.cos(aiObj.angle)*j*0.25, z: aiZ - Math.sin(aiObj.angle)*j*0.25});
+                }
+                aiObj.body = aiBody;
+                aiObj.score = 0; aiObj.isDead = false;
+            }
+        }
+
+        function gameOver() {
+            mySnake.isDead = true; updateScoreExchange();
+            alert(`💥 你的蛇头发生激烈碰撞，阵亡解体！`);
+            document.getElementById("game-interface").style.display = "none";
+            document.getElementById("lobby-container").style.display = "flex";
+            switchTab('loadout');
+            updateLobbyAndShopUI();
+        }
+
+        function showAnnouncement(m) { let b = document.getElementById("kill-announcer"); b.innerText = m; b.style.display = "block"; setTimeout(()=>b.style.display="none", 2500); }
+        
+        function updateLeaderboard() {
+            let allEntities = [mySnake, ...ais];
+            allEntities.sort((a,b) => b.score - a.score);
+            
+            let htmlStr = "";
+            allEntities.forEach((entity, idx) => {
+                let color = (entity.name === mySnake.name) ? "#00ff66" : "#ffaa00";
+                let statusText = entity.isDead ? " (解体)" : "";
+                htmlStr += `
+                    <div class="rank-row" style="color: ${color};">
+                        <span>${idx + 1}. ${entity.name}${statusText}</span>
+                        <b>${entity.score}分</b>
+                    </div>
+                `;
+            });
+            document.getElementById("rank-list").innerHTML = htmlStr;
+        }
+
+        // 持续检测键盘状态池
         window.addEventListener("keydown", e => {
             const k = e.key.toLowerCase();
-            if (k === 'q') castSkillQ();
-            if (k === 'e') castSkillE();
-            if (k === 'r') castSkillR();
-            if (k === 'f') castSkillF(); // 绑定 F 键执行专属 60秒 CD 刷新技能
+            keysPressed[k] = true;
+            if (['q','e','r','f'].includes(k)) castActiveSkill(k);
+        });
 
-            if (isDead) return;
-            if ((k === 'w' || e.key === 'ArrowUp') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = -1; }
-            if ((k === 's' || e.key === 'ArrowDown') && mySnake.dy === 0) { mySnake.dx = 0; mySnake.dy = 1; }
-            if ((k === 'a' || e.key === 'ArrowLeft') && mySnake.dx === 0) { mySnake.dx = -1; mySnake.dy = 0; }
-            if ((k === 'd' || e.key === 'ArrowRight') && mySnake.dx === 0) { mySnake.dx = 1; mySnake.dy = 0; }
+        window.addEventListener("keyup", e => {
+            const k = e.key.toLowerCase();
+            keysPressed[k] = false;
         });
     </script>
 </body>
