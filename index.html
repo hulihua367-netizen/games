@@ -3,109 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UE5 Style 3D Snake & Money Arena</title>
+    <title>3D Snake Arena - Owner Privilege Edition</title>
+    <!-- 引入 3D 渲染引擎 Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { background-color: #0b0f19; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; overflow: hidden; user-select: none; }
         
-        /* 🏢 顶部实时多国语言数据看板 */
-        #game-hud { position: absolute; top: 15px; left: 15px; background: rgba(15, 23, 42, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #1e293b; z-index: 100; min-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        /* 🏢 顶部 HUD 数据看板 */
+        #game-hud { position: absolute; top: 15px; left: 15px; background: rgba(15, 23, 42, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #1e293b; z-index: 100; min-width: 250px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
         .hud-line { font-size: 1.05rem; margin-bottom: 6px; font-weight: bold; display: flex; justify-content: space-between; }
         .coin-txt { color: #f1c40f; }
         .score-txt { color: #00ff66; }
+        .owner-badge { background: #f1c40f; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: 900; display: none; }
 
-        /* 🌐 语言切换按钮与重置 */
+        /* 🌐 控制面板 */
         #control-panel { position: absolute; top: 15px; right: 15px; z-index: 100; display: flex; gap: 10px; }
         .btn-ui { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-ui:hover { background: #1d4ed8; transform: scale(1.05); }
 
-        /* 🏆 排行榜：展示每个实体独立的 Snake 长度和独立 Money 资产 */
-        #leaderboard { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #1e293b; z-index: 100; width: 300px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        /* 🏆 全服独立资产排行榜 */
+        #leaderboard { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #1e293b; z-index: 100; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
         .board-title { font-size: 1.1rem; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 6px; margin-bottom: 8px; font-weight: bold; text-align: center; }
         .player-row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; border-bottom: 1px solid #1e293b; }
         
         /* 💥 阵亡复活提示框 */
         #death-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(30, 41, 59, 0.95); padding: 30px; border-radius: 12px; border: 2px solid #ef4444; text-align: center; z-index: 200; display: none; box-shadow: 0 0 30px rgba(239,68,68,0.3); }
         #death-screen h2 { color: #ef4444; margin-top: 0; }
+
+        /* 🔑 所有者秘籍浮层 */
+        #owner-dialog { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 23, 42, 0.98); border: 2px solid #f1c40f; padding: 25px; border-radius: 10px; z-index: 300; display: none; text-align: center; box-shadow: 0 0 40px rgba(241,196,15,0.4); }
+        #owner-dialog input { background: #0f172a; border: 1px solid #f1c40f; color: #fff; padding: 8px 12px; font-size: 1.2rem; text-align: center; border-radius: 4px; width: 180px; margin: 15px 0; outline: none; }
     </style>
 </head>
 <body>
 
+    <!-- 🏢 个人数据看板 -->
     <div id="game-hud">
-        <div class="hud-line"><span id="lbl-myname">我的守护者蛇</span>: <span style="color:#38bdf8;">67 号</span></div>
+        <div class="hud-line">
+            <span><span id="lbl-myname">我的守护者蛇</span> <span id="owner-badge" class="owner-badge">👑 OWNER</span></span>
+        </div>
         <div class="hud-line"><span id="lbl-myscore">当前长度(食物)</span>: <span id="my-score" class="score-txt">0</span></div>
-        <div class="hud-line"><span id="lbl-mymoney">我的钱包资产</span>: <span id="my-money" class="coin-txt">0</span></div>
+        <div class="hud-line"><span id="lbl-mymoney">我的钱包资产</span>: <span id="my-money" class="coin-txt">$0</span></div>
     </div>
 
+    <!-- 🌐 功能面板 -->
     <div id="control-panel">
         <button class="btn-ui" onclick="toggleLanguage()">🌐 Switch Language / 切换语言</button>
     </div>
 
+    <!-- 🏆 所有人独立的个人资产排行榜 -->
     <div id="leaderboard">
         <div class="board-title" id="lbl-boardtitle">全服独立资产实时看板</div>
         <div id="rank-rows"></div>
     </div>
 
+    <!-- 💥 死亡弹窗 -->
     <div id="death-screen">
-        <h2 id="lbl-deathtitle">你的蛇头发生激烈撞击！</h2>
-        <p id="lbl-deathdesc">已被就地解体，钱包资产已妥善留存。</p>
+        <h2 id="lbl-deathtitle">你的蛇头发生碰撞！</h2>
+        <p id="lbl-deathdesc">核心已被解体，钱包资产已妥善入库。</p>
         <button class="btn-ui" style="background:#ef4444;" onclick="respawnPlayer()" id="lbl-respawnbtn">重新注入战局</button>
     </div>
 
+    <!-- 🔑 所有者密钥输入框 -->
+    <div id="owner-dialog">
+        <h3 style="color:#f1c40f; margin:0;" id="lbl-secret-title">👑 OWNER OVERRIDE SYSTEM</h3>
+        <p style="font-size:0.9rem; color:#94a3b8; margin-top:5px;" id="lbl-secret-sub">Enter Secret Verification Code:</p>
+        <input type="password" id="secret-input" maxlength="10" placeholder="..." autofocus />
+        <br>
+        <button class="btn-ui" style="background:#f1c40f; color:#000;" onclick="submitSecretCode()">VERIFY</button>
+        <button class="btn-ui" style="background:#475569;" onclick="closeSecretDialog()">CANCEL</button>
+    </div>
+
     <script>
-        // 🌍 多国语言本地化字典 (Localization Dictionary)
+        // 🌍 多国语言字典
         const Localization = {
             zh: {
                 myname: "玩家的蛇 (你)",
                 myscore: "当前身长 (吃食物数)",
-                mymoney: "独立钱包资产 ($)",
+                mymoney: "独立钱包资产",
                 boardtitle: "🏆 所有人独立资产排行榜",
                 deathtitle: "💥 你的蛇头发生毁灭撞击！",
-                deathdesc: "您的核心已解体，金币资产已妥善保存入库。",
+                deathdesc: "核心已解体，金币资产已妥善保存。",
                 respawnbtn: "重新克隆进入大地图",
-                foodName: "高维能量果"
+                secretTitle: "👑 所有者最高控制权限认证",
+                secretSub: "请输入验证秘钥以解锁神级特权："
             },
             en: {
                 myname: "Player's Snake (You)",
-                myscore: "Current Length (Food Eaten)",
-                mymoney: "Independent Wallet ($)",
+                myscore: "Current Length (Food)",
+                mymoney: "Independent Wallet",
                 boardtitle: "🏆 Global Independent Assets",
                 deathtitle: "💥 Your Snake Head Collided!",
-                deathdesc: "Your snake body disintegrated. Wallet balance is securely saved.",
+                deathdesc: "Body disintegrated. Wallet balance securely saved.",
                 respawnbtn: "Respawn Into Arena",
-                foodName: "Quantum Fruit"
+                secretTitle: "👑 OWNER OVERRIDE SYSTEM",
+                secretSub: "Enter Secret Verification Code:"
             }
         };
 
-        let currentLang = 'zh'; // 默认语言
-
-        // 🗺️ 设定类似虚幻引擎大地图边界：100 x 100
-        const MAP_SIZE = 100;
+        let currentLang = 'zh';
+        const MAP_SIZE = 120;
         
-        // 🐍 全局实体数据库：每个人都有独立的 Snake 身体、独立的分数(Food数)和独立的金币(Money)
+        // 🐍 全局实体：人人拥有独立的蛇身、分数与钱包资产
         let entities = [
-            { id: "player", name: "", body: [], angle: 0, speed: 0.25, score: 0, money: 1500, isDead: false, color: 0x00ff66, headColor: 0xffffff },
-            { id: "ai_1", name: "Alpha_Gamer", body: [], angle: 0, speed: 0.18, score: 0, money: 820, isDead: false, color: 0x9b59b6, headColor: 0xff00ff },
-            { id: "ai_2", name: "Shadow_Hunter", body: [], angle: 0, speed: 0.19, score: 0, money: 1240, isDead: false, color: 0xe67e22, headColor: 0xffaa00 },
-            { id: "ai_3", name: "Matrix_67", body: [], angle: 0, speed: 0.17, score: 0, money: 3100, isDead: false, color: 0x34495e, headColor: 0x1abc9c },
-            { id: "ai_4", name: "Unreal_Bot", body: [], angle: 0, speed: 0.20, score: 0, money: 450, isDead: false, color: 0xe74c3c, headColor: 0xf39c12 },
-            { id: "ai_5", name: "Crypto_Snake", body: [], angle: 0, speed: 0.18, score: 0, money: 9999, isDead: false, color: 0xf1c40f, headColor: 0xffffff }
+            { id: "player", name: "", body: [], angle: 0, speed: 0.25, score: 0, money: 1500, isDead: false, color: 0x00ff66, headColor: 0xffffff, isOwner: false },
+            { id: "ai_1", name: "Alpha_Gamer", body: [], angle: 0, speed: 0.18, score: 0, money: 820, isDead: false, color: 0x9b59b6, headColor: 0xff00ff, isOwner: false },
+            { id: "ai_2", name: "Shadow_Hunter", body: [], angle: 0, speed: 0.19, score: 0, money: 1240, isDead: false, color: 0xe67e22, headColor: 0xffaa00, isOwner: false },
+            { id: "ai_3", name: "Matrix_67", body: [], angle: 0, speed: 0.17, score: 0, money: 3100, isDead: false, color: 0x34495e, headColor: 0x1abc9c, isOwner: false },
+            { id: "ai_4", name: "Unreal_Bot", body: [], angle: 0, speed: 0.20, score: 0, money: 450, isDead: false, color: 0xe74c3c, headColor: 0xf39c12, isOwner: false },
+            { id: "ai_5", name: "Crypto_Snake", body: [], angle: 0, speed: 0.18, score: 0, money: 9999, isDead: false, color: 0x38bdf8, headColor: 0xffffff, isOwner: false }
         ];
 
-        // 🍓 场景内食物群落坐标
         let foods = [];
-        const TOTAL_FOODS = 80;
-
-        // 🕹️ 键盘操作监听状态池
+        const TOTAL_FOODS = 90;
         let keysPressed = {};
 
-        // 3D 渲染核心变量
+        // 3D 渲染器与场景变量
         let scene, camera, renderer;
         let meshGroup = [];
 
-        // 初始化游戏
         function initGame() {
-            // 1. 初始化 3D 场景与高空俯视相机
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0f172a);
 
@@ -114,29 +131,32 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // 2. 增加灯光环境
-            let ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            let ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
             scene.add(ambientLight);
-            let dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight.position.set(MAP_SIZE/2, 40, MAP_SIZE/2);
+            let dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+            dirLight.position.set(MAP_SIZE/2, 50, MAP_SIZE/2);
             scene.add(dirLight);
 
-            // 3. 铺设虚幻风格大地图网格
             let gridHelper = new THREE.GridHelper(MAP_SIZE, MAP_SIZE, 0x38bdf8, 0x1e293b);
             gridHelper.position.set(MAP_SIZE/2, 0, MAP_SIZE/2);
             scene.add(gridHelper);
 
-            // 4. 生成所有人独立的初始蛇身位置
             entities.forEach(entity => initSingleSnakeBody(entity));
 
-            // 5. 生成漫山遍野的食物
             for(let i=0; i<TOTAL_FOODS; i++) {
                 foods.push(createNewFoodRandomly());
             }
 
-            // 6. 绑定输入、刷新语言、启动物理主循环
             updateLanguageUI();
-            window.addEventListener("keydown", e => keysPressed[e.key.toLowerCase()] = true);
+
+            // 监听键盘：按 'o' 键唤起所有者秘籍框
+            window.addEventListener("keydown", e => {
+                let key = e.key.toLowerCase();
+                keysPressed[key] = true;
+                if (key === 'o') {
+                    openSecretDialog();
+                }
+            });
             window.addEventListener("keyup", e => keysPressed[e.key.toLowerCase()] = false);
             window.addEventListener("resize", onWindowResize);
 
@@ -147,31 +167,60 @@
             entity.isDead = false;
             entity.score = 0;
             entity.angle = Math.random() * Math.PI * 2;
-            let startX = Math.random() * (MAP_SIZE - 30) + 15;
-            let startZ = Math.random() * (MAP_SIZE - 30) + 15;
+            let startX = Math.random() * (MAP_SIZE - 40) + 20;
+            let startZ = Math.random() * (MAP_SIZE - 40) + 20;
             entity.body = [];
-            // 为每个人赋予独立初始身长 (12个采样点节点)
             for(let i=0; i<12; i++) {
                 entity.body.push({ x: startX - Math.cos(entity.angle)*i*0.3, z: startZ - Math.sin(entity.angle)*i*0.3 });
             }
         }
 
         function createNewFoodRandomly() {
-            // 食物带有不同价值价值的 Money 金币含金量
             let rand = Math.random();
-            let value = 10; let color = 0xff3333; // 普通苹果红色
-            if (rand > 0.9) { value = 100; color = 0xf1c40f; } // 黄金能量块
-            else if (rand > 0.7) { value = 50; color = 0x9b59b6; } // 紫色大葡萄
+            let value = 10; let color = 0xff3333;
+            if (rand > 0.88) { value = 100; color = 0xf1c40f; }
+            else if (rand > 0.65) { value = 50; color = 0x9b59b6; }
             
             return {
-                x: Math.random() * (MAP_SIZE - 2) + 1,
-                z: Math.random() * (MAP_SIZE - 2) + 1,
+                x: Math.random() * (MAP_SIZE - 4) + 2,
+                z: Math.random() * (MAP_SIZE - 4) + 2,
                 moneyValue: value,
                 color: color
             };
         }
 
-        // 🔄 语言切换引擎
+        // 🔑 所有者秘籍处理系统
+        function openSecretDialog() {
+            document.getElementById("owner-dialog").style.display = "block";
+            let input = document.getElementById("secret-input");
+            input.value = "";
+            input.focus();
+        }
+
+        function closeSecretDialog() {
+            document.getElementById("owner-dialog").style.display = "none";
+        }
+
+        function submitSecretCode() {
+            let code = document.getElementById("secret-input").value.trim();
+            if (code === "67" || code.includes("67")) {
+                let player = entities.find(e => e.id === "player");
+                player.isOwner = true;
+                player.money += 100000;
+                player.score += 500;
+                player.color = 0xf1c40f; // 黄金霸体色彩
+                player.headColor = 0xffffff;
+
+                document.getElementById("owner-badge").style.display = "inline-block";
+                alert("👑 OWNER AUTHORIZATION GRANTED!\n\nPrivileges Unlocked:\n- Wallet: +$100,000\n- Length: +500\n- Invincible Golden Body Activated!");
+                closeSecretDialog();
+                updateHUDAndLeaderboard();
+            } else {
+                alert("❌ Access Denied: Invalid Code.");
+                closeSecretDialog();
+            }
+        }
+
         function toggleLanguage() {
             currentLang = (currentLang === 'zh') ? 'en' : 'zh';
             updateLanguageUI();
@@ -188,15 +237,15 @@
             document.getElementById("lbl-deathtitle").innerText = dict.deathtitle;
             document.getElementById("lbl-deathdesc").innerText = dict.deathdesc;
             document.getElementById("lbl-respawnbtn").innerText = dict.respawnbtn;
+            document.getElementById("lbl-secret-title").innerText = dict.secretTitle;
+            document.getElementById("lbl-secret-sub").innerText = dict.secretSub;
             
             updateHUDAndLeaderboard();
         }
 
-        // 🚀 核心物理和渲染总循环
         function animateLoop() {
             requestAnimationFrame(animateLoop);
 
-            // 1. 玩家独立滑行物理操控 (A/D平滑改变正弦切线角度)
             let player = entities.find(e => e.id === "player");
             if (!player.isDead) {
                 if (keysPressed['a'] || keysPressed['arrowleft']) player.angle -= 0.05;
@@ -206,7 +255,6 @@
                 checkCollisionsAndEating(player, true);
             }
 
-            // 2. AI 们独立自动追踪食物物理
             entities.forEach(entity => {
                 if (entity.id === "player" || entity.isDead) return;
                 runAISmartLogic(entity);
@@ -214,13 +262,11 @@
                 checkCollisionsAndEating(entity, false);
             });
 
-            // 3. 虚幻引擎标志性的高空相机平滑追随玩家
             if (!player.isDead) {
-                camera.position.set(player.body[0].x, 22, player.body[0].z + 10);
+                camera.position.set(player.body[0].x, 24, player.body[0].z + 12);
                 camera.lookAt(player.body[0].x, 0, player.body[0].z);
             }
 
-            // 4. 重建 3D 几何网格世界
             render3DSceneObjects();
         }
 
@@ -229,10 +275,8 @@
             let nextX = head.x + Math.cos(entity.angle) * entity.speed;
             let nextZ = head.z + Math.sin(entity.angle) * entity.speed;
             
-            // 插入全新平滑头部
             entity.body.unshift({ x: nextX, z: nextZ });
             
-            // 根据吃水果的分数动态计算限制尾部，防止无限变长拉缩拉伸
             let targetLength = 12 + Math.floor(entity.score / 5);
             while (entity.body.length > targetLength) {
                 entity.body.pop();
@@ -242,40 +286,39 @@
         function checkCollisionsAndEating(entity, isRealPlayer) {
             let head = entity.body[0];
 
-            // A款碰撞：越过大图边界直接判定解体
-            if (head.x < 0 || head.x > MAP_SIZE || head.z < 0 || head.z > MAP_SIZE) {
-                killEntity(entity);
-                return;
-            }
+            // 所有者获得免疫出界与撞墙特权
+            if (!entity.isOwner) {
+                if (head.x < 0 || head.x > MAP_SIZE || head.z < 0 || head.z > MAP_SIZE) {
+                    killEntity(entity);
+                    return;
+                }
 
-            // B款碰撞：头部撞到全服任何人的蛇身节点直接暴毙
-            for (let i = 0; i < entities.length; i++) {
-                let target = entities[i];
-                if (target.isDead) continue;
-                
-                // 如果是撞自己，需要跳过前4个头部节点，防止自啃
-                let startNode = (target.id === entity.id) ? 5 : 0;
-                for (let j = startNode; j < target.body.length; j++) {
-                    let dx = head.x - target.body[j].x;
-                    let dz = head.z - target.body[j].z;
-                    if (dx*dx + dz*dz < 0.22) {
-                        killEntity(entity);
-                        return;
+                for (let i = 0; i < entities.length; i++) {
+                    let target = entities[i];
+                    if (target.isDead) continue;
+                    
+                    let startNode = (target.id === entity.id) ? 5 : 0;
+                    for (let j = startNode; j < target.body.length; j++) {
+                        let dx = head.x - target.body[j].x;
+                        let dz = head.z - target.body[j].z;
+                        if (dx*dx + dz*dz < 0.22) {
+                            killEntity(entity);
+                            return;
+                        }
                     }
                 }
             }
 
-            // C款触发：检测吃水果(Food)并增加每个人自己的独立金币(Money)
             for (let i = foods.length - 1; i >= 0; i--) {
                 let f = foods[i];
                 let dx = head.x - f.x;
                 let dz = head.z - f.z;
                 if (dx*dx + dz*dz < 0.8) {
-                    entity.score += 10; // 身长增长分
-                    entity.money += f.moneyValue; // 每个独立实体斩获专属水果内含的金币！
+                    entity.score += 10;
+                    entity.money += f.moneyValue;
                     
                     foods.splice(i, 1);
-                    foods.push(createNewFoodRandomly()); // 地图循环再生水果
+                    foods.push(createNewFoodRandomly());
                     
                     if (isRealPlayer) updateHUDAndLeaderboard();
                     break;
@@ -288,10 +331,7 @@
             if (entity.id === "player") {
                 document.getElementById("death-screen").style.display = "block";
             } else {
-                // 如果是AI阵亡，4秒后独立在地图随机点重新携带钱包复活
-                setTimeout(() => {
-                    initSingleSnakeBody(entity);
-                }, 4000);
+                setTimeout(() => { initSingleSnakeBody(entity); }, 4000);
             }
             updateHUDAndLeaderboard();
         }
@@ -303,13 +343,11 @@
             updateHUDAndLeaderboard();
         }
 
-        // 🤖 AI 独立自动追踪避障算法
         function runAISmartLogic(ai) {
             let head = ai.body[0];
-            
-            // 寻找地图中距离自己的头最近的那颗水果
             let nearestFruit = foods[0];
             let minDist = 99999;
+
             foods.forEach(f => {
                 let d = (f.x - head.x)*(f.x - head.x) + (f.z - head.z)*(f.z - head.z);
                 if (d < minDist) { minDist = d; nearestFruit = f; }
@@ -320,37 +358,32 @@
                 idealAngle = Math.atan2(nearestFruit.z - head.z, nearestFruit.x - head.x);
             }
 
-            // 预判前瞻壁障检测
             let lookAheadX = head.x + Math.cos(idealAngle) * 3;
             let lookAheadZ = head.z + Math.sin(idealAngle) * 3;
             if (lookAheadX < 2 || lookAheadX > MAP_SIZE - 2 || lookAheadZ < 2 || lookAheadZ > MAP_SIZE - 2) {
-                idealAngle += 1.0; // 边缘紧急反向转向
+                idealAngle += 1.0;
             }
 
-            // 平滑修正AI方向盘打转角度
             let diff = idealAngle - ai.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
             ai.angle += diff * 0.1;
         }
 
-        // 3D 几何实体实时清洗与装载
         function render3DSceneObjects() {
             meshGroup.forEach(mesh => scene.remove(mesh));
             meshGroup = [];
 
-            // 1. 独立渲染全服所有还活着的蛇（Snake）
             entities.forEach(entity => {
                 if (entity.isDead) return;
 
                 entity.body.forEach((node, index) => {
-                    // 头部画得稍大，且赋予独立光泽
                     let isHead = (index === 0);
-                    let geo = isHead ? new THREE.SphereGeometry(0.45, 16, 16) : new THREE.SphereGeometry(0.33, 8, 8);
+                    let geo = isHead ? new THREE.SphereGeometry(0.48, 16, 16) : new THREE.SphereGeometry(0.35, 8, 8);
                     let mat = new THREE.MeshStandardMaterial({
                         color: isHead ? entity.headColor : entity.color,
-                        roughness: 0.2,
-                        metalness: 0.4
+                        roughness: entity.isOwner ? 0.0 : 0.2,
+                        metalness: entity.isOwner ? 0.9 : 0.4
                     });
                     let mesh = new THREE.Mesh(geo, mat);
                     mesh.position.set(node.x, 0.4, node.z);
@@ -359,34 +392,32 @@
                 });
             });
 
-            // 2. 独立渲染散落的世界水果（Food）
             foods.forEach(f => {
-                let geo = new THREE.DodecahedronGeometry(0.28); // 立体水果多面体
-                let mat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.1, emissive: f.color, emissiveIntensity: 0.4 });
+                let geo = new THREE.DodecahedronGeometry(0.3);
+                let mat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.1, emissive: f.color, emissiveIntensity: 0.5 });
                 let mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(f.x, 0.3, f.z);
+                mesh.position.set(f.x, 0.35, f.z);
                 scene.add(mesh);
                 meshGroup.push(mesh);
             });
         }
 
-        // 📊 刷新数据面板与全服所有人独立资产排位赛
         function updateHUDAndLeaderboard() {
             let player = entities.find(e => e.id === "player");
             document.getElementById("my-score").innerText = player.score;
-            document.getElementById("my-money").innerText = `$ ${player.money}`;
+            document.getElementById("my-money").innerText = `$${player.money}`;
 
-            // 深拷贝一份根据每个人的独立资产金币财富值(Money)进行降序排行
             let sorted = [...entities].sort((a, b) => b.money - a.money);
             
             let html = "";
             sorted.forEach((item, index) => {
                 let isMe = (item.id === "player");
                 let colorStyle = isMe ? "color:#00ff66; font-weight:bold;" : "color:#fff;";
+                let crown = item.isOwner ? "👑 " : "";
                 let status = item.isDead ? " [DEAD]" : "";
                 html += `
                     <div class="player-row" style="${colorStyle}">
-                        <span>${index + 1}. ${item.name}${status}</span>
+                        <span>${index + 1}. ${crown}${item.name}${status}</span>
                         <span><b style="color:#00ff66;">Len:${item.score}</b> | <b style="color:#f1c40f;">$${item.money}</b></span>
                     </div>
                 `;
@@ -400,7 +431,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // 运行初始化
         window.onload = initGame;
     </script>
 </body>
