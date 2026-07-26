@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Snake Arena - Owner Privilege Edition</title>
+    <title>3D Hero Arena - Owner Edition</title>
     <!-- 引入 3D 渲染引擎 Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -40,10 +40,10 @@
     <!-- 🏢 个人数据看板 -->
     <div id="game-hud">
         <div class="hud-line">
-            <span><span id="lbl-myname">我的守护者蛇</span> <span id="owner-badge" class="owner-badge">👑 OWNER</span></span>
+            <span><span id="lbl-myname">我的英雄</span> <span id="owner-badge" class="owner-badge">👑 OWNER</span></span>
         </div>
-        <div class="hud-line"><span id="lbl-myscore">当前长度(食物)</span>: <span id="my-score" class="score-txt">0</span></div>
-        <div class="hud-line"><span id="lbl-mymoney">我的钱包资产</span>: <span id="my-money" class="coin-txt">$0</span></div>
+        <div class="hud-line"><span id="lbl-myscore">击败数</span>: <span id="my-score" class="score-txt">0</span></div>
+        <div class="hud-line"><span id="lbl-mymoney">钱包资产</span>: <span id="my-money" class="coin-txt">$0</span></div>
     </div>
 
     <!-- 🌐 功能面板 -->
@@ -53,21 +53,21 @@
 
     <!-- 🏆 所有人独立的个人资产排行榜 -->
     <div id="leaderboard">
-        <div class="board-title" id="lbl-boardtitle">全服独立资产实时看板</div>
+        <div class="board-title" id="lbl-boardtitle">全服独立资产排行榜</div>
         <div id="rank-rows"></div>
     </div>
 
     <!-- 💥 死亡弹窗 -->
     <div id="death-screen">
-        <h2 id="lbl-deathtitle">你的蛇头发生碰撞！</h2>
-        <p id="lbl-deathdesc">核心已被解体，钱包资产已妥善入库。</p>
-        <button class="btn-ui" style="background:#ef4444;" onclick="respawnPlayer()" id="lbl-respawnbtn">重新注入战局</button>
+        <h2 id="lbl-deathtitle">你已被击败！</h2>
+        <p id="lbl-deathdesc">钱包资产已妥善入库。</p>
+        <button class="btn-ui" style="background:#ef4444;" onclick="respawnPlayer()" id="lbl-respawnbtn">重新进入战场</button>
     </div>
 
     <!-- 🔑 所有者密钥输入框 -->
     <div id="owner-dialog">
         <h3 style="color:#f1c40f; margin:0;" id="lbl-secret-title">👑 OWNER OVERRIDE SYSTEM</h3>
-        <p style="font-size:0.9rem; color:#94a3b8; margin-top:5px;" id="lbl-secret-sub">Enter Secret Verification Code:</p>
+        <p style="font-size:0.9rem; color:#94a3b8; margin-top:5px;" id="lbl-secret-sub">Enter Secret Code:</p>
         <input type="password" id="secret-input" maxlength="10" placeholder="..." autofocus />
         <br>
         <button class="btn-ui" style="background:#f1c40f; color:#000;" onclick="submitSecretCode()">VERIFY</button>
@@ -75,50 +75,47 @@
     </div>
 
     <script>
-        // 🌍 多国语言字典
         const Localization = {
             zh: {
-                myname: "玩家的蛇 (你)",
-                myscore: "当前身长 (吃食物数)",
-                mymoney: "独立钱包资产",
-                boardtitle: "🏆 所有人独立资产排行榜",
-                deathtitle: "💥 你的蛇头发生毁灭撞击！",
-                deathdesc: "核心已解体，金币资产已妥善保存。",
-                respawnbtn: "重新克隆进入大地图",
+                myname: "玩家英雄 (你)",
+                myscore: "击杀数",
+                mymoney: "独立钱包",
+                boardtitle: "🏆 全服独立资产排行榜",
+                deathtitle: "💥 英雄已被击败！",
+                deathdesc: "金币资产已妥善保存。",
+                respawnbtn: "重新复活",
                 secretTitle: "👑 所有者最高控制权限认证",
-                secretSub: "请输入验证秘钥以解锁神级特权："
+                secretSub: "请输入验证秘钥解锁神级特权："
             },
             en: {
-                myname: "Player's Snake (You)",
-                myscore: "Current Length (Food)",
+                myname: "Player Hero (You)",
+                myscore: "Kills",
                 mymoney: "Independent Wallet",
-                boardtitle: "🏆 Global Independent Assets",
-                deathtitle: "💥 Your Snake Head Collided!",
-                deathdesc: "Body disintegrated. Wallet balance securely saved.",
-                respawnbtn: "Respawn Into Arena",
+                boardtitle: "🏆 Global Leaderboard",
+                deathtitle: "💥 Hero Defeated!",
+                deathdesc: "Wallet balance securely saved.",
+                respawnbtn: "Respawn",
                 secretTitle: "👑 OWNER OVERRIDE SYSTEM",
                 secretSub: "Enter Secret Verification Code:"
             }
         };
 
         let currentLang = 'zh';
-        const MAP_SIZE = 120;
+        const MAP_SIZE = 100;
         
-        // 🐍 全局实体：人人拥有独立的蛇身、分数与钱包资产
+        // 全局英雄实体（只有单独的角色，无蛇身）
         let entities = [
-            { id: "player", name: "", body: [], angle: 0, speed: 0.25, score: 0, money: 1500, isDead: false, color: 0x00ff66, headColor: 0xffffff, isOwner: false },
-            { id: "ai_1", name: "Alpha_Gamer", body: [], angle: 0, speed: 0.18, score: 0, money: 820, isDead: false, color: 0x9b59b6, headColor: 0xff00ff, isOwner: false },
-            { id: "ai_2", name: "Shadow_Hunter", body: [], angle: 0, speed: 0.19, score: 0, money: 1240, isDead: false, color: 0xe67e22, headColor: 0xffaa00, isOwner: false },
-            { id: "ai_3", name: "Matrix_67", body: [], angle: 0, speed: 0.17, score: 0, money: 3100, isDead: false, color: 0x34495e, headColor: 0x1abc9c, isOwner: false },
-            { id: "ai_4", name: "Unreal_Bot", body: [], angle: 0, speed: 0.20, score: 0, money: 450, isDead: false, color: 0xe74c3c, headColor: 0xf39c12, isOwner: false },
-            { id: "ai_5", name: "Crypto_Snake", body: [], angle: 0, speed: 0.18, score: 0, money: 9999, isDead: false, color: 0x38bdf8, headColor: 0xffffff, isOwner: false }
+            { id: "player", name: "", x: 0, z: 0, hp: 100, kills: 0, money: 1500, isDead: false, color: 0x00ff66, isOwner: false },
+            { id: "ai_1", name: "Colt_Bot", x: 20, z: 20, hp: 100, kills: 0, money: 820, isDead: false, color: 0x9b59b6, isOwner: false },
+            { id: "ai_2", name: "Shelly_AI", x: -20, z: 20, hp: 100, kills: 0, money: 1240, isDead: false, color: 0xe67e22, isOwner: false },
+            { id: "ai_3", name: "Spike_67", x: 20, z: -20, hp: 100, kills: 0, money: 3100, isDead: false, color: 0x34495e, isOwner: false },
+            { id: "ai_4", name: "El_Primo", x: -20, z: -20, hp: 100, kills: 0, money: 450, isDead: false, color: 0xe74c3c, isOwner: false }
         ];
 
-        let foods = [];
-        const TOTAL_FOODS = 90;
+        let foods = []; // 金币/水果资源块
+        let bullets = []; // 子弹列表
         let keysPressed = {};
 
-        // 3D 渲染器与场景变量
         let scene, camera, renderer;
         let meshGroup = [];
 
@@ -134,28 +131,24 @@
             let ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
             scene.add(ambientLight);
             let dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
-            dirLight.position.set(MAP_SIZE/2, 50, MAP_SIZE/2);
+            dirLight.position.set(0, 50, 0);
             scene.add(dirLight);
 
-            let gridHelper = new THREE.GridHelper(MAP_SIZE, MAP_SIZE, 0x38bdf8, 0x1e293b);
-            gridHelper.position.set(MAP_SIZE/2, 0, MAP_SIZE/2);
+            let gridHelper = new THREE.GridHelper(MAP_SIZE, MAP_SIZE/2, 0x38bdf8, 0x1e293b);
             scene.add(gridHelper);
 
-            entities.forEach(entity => initSingleSnakeBody(entity));
-
-            for(let i=0; i<TOTAL_FOODS; i++) {
-                foods.push(createNewFoodRandomly());
+            // 初始化资源水晶
+            for(let i=0; i<40; i++) {
+                foods.push(createNewFood());
             }
 
             updateLanguageUI();
 
-            // 监听键盘：按 'o' 键唤起所有者秘籍框
             window.addEventListener("keydown", e => {
                 let key = e.key.toLowerCase();
                 keysPressed[key] = true;
-                if (key === 'o') {
-                    openSecretDialog();
-                }
+                if (key === 'o') openSecretDialog();
+                if (key === ' ') fireBullet(entities.find(e => e.id === "player"));
             });
             window.addEventListener("keyup", e => keysPressed[e.key.toLowerCase()] = false);
             window.addEventListener("resize", onWindowResize);
@@ -163,33 +156,15 @@
             animateLoop();
         }
 
-        function initSingleSnakeBody(entity) {
-            entity.isDead = false;
-            entity.score = 0;
-            entity.angle = Math.random() * Math.PI * 2;
-            let startX = Math.random() * (MAP_SIZE - 40) + 20;
-            let startZ = Math.random() * (MAP_SIZE - 40) + 20;
-            entity.body = [];
-            for(let i=0; i<12; i++) {
-                entity.body.push({ x: startX - Math.cos(entity.angle)*i*0.3, z: startZ - Math.sin(entity.angle)*i*0.3 });
-            }
-        }
-
-        function createNewFoodRandomly() {
-            let rand = Math.random();
-            let value = 10; let color = 0xff3333;
-            if (rand > 0.88) { value = 100; color = 0xf1c40f; }
-            else if (rand > 0.65) { value = 50; color = 0x9b59b6; }
-            
+        function createNewFood() {
             return {
-                x: Math.random() * (MAP_SIZE - 4) + 2,
-                z: Math.random() * (MAP_SIZE - 4) + 2,
-                moneyValue: value,
-                color: color
+                x: (Math.random() - 0.5) * (MAP_SIZE - 10),
+                z: (Math.random() - 0.5) * (MAP_SIZE - 10),
+                moneyValue: Math.random() > 0.8 ? 100 : 20,
+                color: Math.random() > 0.8 ? 0xf1c40f : 0x00ff66
             };
         }
 
-        // 🔑 所有者秘籍处理系统
         function openSecretDialog() {
             document.getElementById("owner-dialog").style.display = "block";
             let input = document.getElementById("secret-input");
@@ -203,20 +178,18 @@
 
         function submitSecretCode() {
             let code = document.getElementById("secret-input").value.trim();
-            if (code === "67" || code.includes("67")) {
+            if (code === "67") {
                 let player = entities.find(e => e.id === "player");
                 player.isOwner = true;
                 player.money += 100000;
-                player.score += 500;
-                player.color = 0xf1c40f; // 黄金霸体色彩
-                player.headColor = 0xffffff;
+                player.color = 0xf1c40f; // 金色战甲
 
                 document.getElementById("owner-badge").style.display = "inline-block";
-                alert("👑 OWNER AUTHORIZATION GRANTED!\n\nPrivileges Unlocked:\n- Wallet: +$100,000\n- Length: +500\n- Invincible Golden Body Activated!");
+                alert("👑 OWNER PRIVILEGES UNLOCKED!\n- Wallet: +$100,000\n- Invincible Golden Armor Activated!");
                 closeSecretDialog();
                 updateHUDAndLeaderboard();
             } else {
-                alert("❌ Access Denied: Invalid Code.");
+                alert("❌ Invalid Code.");
                 closeSecretDialog();
             }
         }
@@ -243,160 +216,77 @@
             updateHUDAndLeaderboard();
         }
 
+        function fireBullet(entity) {
+            if (!entity || entity.isDead) return;
+            bullets.push({
+                x: entity.x,
+                z: entity.z,
+                dx: (Math.random() - 0.5) * 0.8,
+                dz: (Math.random() - 0.5) * 0.8,
+                ownerId: entity.id,
+                life: 60
+            });
+        }
+
         function animateLoop() {
             requestAnimationFrame(animateLoop);
 
             let player = entities.find(e => e.id === "player");
             if (!player.isDead) {
-                if (keysPressed['a'] || keysPressed['arrowleft']) player.angle -= 0.05;
-                if (keysPressed['d'] || keysPressed['arrowright']) player.angle += 0.05;
+                let speed = 0.35;
+                if (keysPressed['w'] || keysPressed['arrowup']) player.z -= speed;
+                if (keysPressed['s'] || keysPressed['arrowdown']) player.z += speed;
+                if (keysPressed['a'] || keysPressed['arrowleft']) player.x -= speed;
+                if (keysPressed['d'] || keysPressed['arrowright']) player.x += speed;
 
-                moveForwardSmoothly(player);
-                checkCollisionsAndEating(player, true);
-            }
-
-            entities.forEach(entity => {
-                if (entity.id === "player" || entity.isDead) return;
-                runAISmartLogic(entity);
-                moveForwardSmoothly(entity);
-                checkCollisionsAndEating(entity, false);
-            });
-
-            if (!player.isDead) {
-                camera.position.set(player.body[0].x, 24, player.body[0].z + 12);
-                camera.lookAt(player.body[0].x, 0, player.body[0].z);
-            }
-
-            render3DSceneObjects();
-        }
-
-        function moveForwardSmoothly(entity) {
-            let head = entity.body[0];
-            let nextX = head.x + Math.cos(entity.angle) * entity.speed;
-            let nextZ = head.z + Math.sin(entity.angle) * entity.speed;
-            
-            entity.body.unshift({ x: nextX, z: nextZ });
-            
-            let targetLength = 12 + Math.floor(entity.score / 5);
-            while (entity.body.length > targetLength) {
-                entity.body.pop();
-            }
-        }
-
-        function checkCollisionsAndEating(entity, isRealPlayer) {
-            let head = entity.body[0];
-
-            // 所有者获得免疫出界与撞墙特权
-            if (!entity.isOwner) {
-                if (head.x < 0 || head.x > MAP_SIZE || head.z < 0 || head.z > MAP_SIZE) {
-                    killEntity(entity);
-                    return;
-                }
-
-                for (let i = 0; i < entities.length; i++) {
-                    let target = entities[i];
-                    if (target.isDead) continue;
-                    
-                    let startNode = (target.id === entity.id) ? 5 : 0;
-                    for (let j = startNode; j < target.body.length; j++) {
-                        let dx = head.x - target.body[j].x;
-                        let dz = head.z - target.body[j].z;
-                        if (dx*dx + dz*dz < 0.22) {
-                            killEntity(entity);
-                            return;
-                        }
+                // 吃资源金币
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    let f = foods[i];
+                    let dx = player.x - f.x;
+                    let dz = player.z - f.z;
+                    if (dx*dx + dz*dz < 1.5) {
+                        player.money += f.moneyValue;
+                        foods.splice(i, 1);
+                        foods.push(createNewFood());
+                        updateHUDAndLeaderboard();
                     }
                 }
             }
 
-            for (let i = foods.length - 1; i >= 0; i--) {
-                let f = foods[i];
-                let dx = head.x - f.x;
-                let dz = head.z - f.z;
-                if (dx*dx + dz*dz < 0.8) {
-                    entity.score += 10;
-                    entity.money += f.moneyValue;
-                    
-                    foods.splice(i, 1);
-                    foods.push(createNewFoodRandomly());
-                    
-                    if (isRealPlayer) updateHUDAndLeaderboard();
-                    break;
-                }
-            }
-        }
-
-        function killEntity(entity) {
-            entity.isDead = true;
-            if (entity.id === "player") {
-                document.getElementById("death-screen").style.display = "block";
-            } else {
-                setTimeout(() => { initSingleSnakeBody(entity); }, 4000);
-            }
-            updateHUDAndLeaderboard();
-        }
-
-        function respawnPlayer() {
-            let player = entities.find(e => e.id === "player");
-            initSingleSnakeBody(player);
-            document.getElementById("death-screen").style.display = "none";
-            updateHUDAndLeaderboard();
-        }
-
-        function runAISmartLogic(ai) {
-            let head = ai.body[0];
-            let nearestFruit = foods[0];
-            let minDist = 99999;
-
-            foods.forEach(f => {
-                let d = (f.x - head.x)*(f.x - head.x) + (f.z - head.z)*(f.z - head.z);
-                if (d < minDist) { minDist = d; nearestFruit = f; }
-            });
-
-            let idealAngle = ai.angle;
-            if (nearestFruit) {
-                idealAngle = Math.atan2(nearestFruit.z - head.z, nearestFruit.x - head.x);
+            // 相机视角锁定玩家
+            if (!player.isDead) {
+                camera.position.set(player.x, 25, player.z + 18);
+                camera.lookAt(player.x, 0, player.z);
             }
 
-            let lookAheadX = head.x + Math.cos(idealAngle) * 3;
-            let lookAheadZ = head.z + Math.sin(idealAngle) * 3;
-            if (lookAheadX < 2 || lookAheadX > MAP_SIZE - 2 || lookAheadZ < 2 || lookAheadZ > MAP_SIZE - 2) {
-                idealAngle += 1.0;
-            }
-
-            let diff = idealAngle - ai.angle;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            ai.angle += diff * 0.1;
+            render3DSceneObjects();
         }
 
         function render3DSceneObjects() {
             meshGroup.forEach(mesh => scene.remove(mesh));
             meshGroup = [];
 
+            // 渲染英雄角色（单个 Mesh，无蛇身）
             entities.forEach(entity => {
                 if (entity.isDead) return;
 
-                entity.body.forEach((node, index) => {
-                    let isHead = (index === 0);
-                    let geo = isHead ? new THREE.SphereGeometry(0.48, 16, 16) : new THREE.SphereGeometry(0.35, 8, 8);
-                    let mat = new THREE.MeshStandardMaterial({
-                        color: isHead ? entity.headColor : entity.color,
-                        roughness: entity.isOwner ? 0.0 : 0.2,
-                        metalness: entity.isOwner ? 0.9 : 0.4
-                    });
-                    let mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.set(node.x, 0.4, node.z);
-                    scene.add(mesh);
-                    meshGroup.push(mesh);
+                let geo = new THREE.CylinderGeometry(0.8, 0.8, 2, 16);
+                let mat = new THREE.MeshStandardMaterial({
+                    color: entity.color,
+                    metalness: entity.isOwner ? 0.9 : 0.2
                 });
+                let mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(entity.x, 1, entity.z);
+                scene.add(mesh);
+                meshGroup.push(mesh);
             });
 
+            // 渲染散落的水晶资源
             foods.forEach(f => {
-                let geo = new THREE.DodecahedronGeometry(0.3);
-                let mat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.1, emissive: f.color, emissiveIntensity: 0.5 });
+                let geo = new THREE.OctahedronGeometry(0.5);
+                let mat = new THREE.MeshStandardMaterial({ color: f.color, emissive: f.color, emissiveIntensity: 0.5 });
                 let mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(f.x, 0.35, f.z);
+                mesh.position.set(f.x, 0.5, f.z);
                 scene.add(mesh);
                 meshGroup.push(mesh);
             });
@@ -404,7 +294,7 @@
 
         function updateHUDAndLeaderboard() {
             let player = entities.find(e => e.id === "player");
-            document.getElementById("my-score").innerText = player.score;
+            document.getElementById("my-score").innerText = player.kills;
             document.getElementById("my-money").innerText = `$${player.money}`;
 
             let sorted = [...entities].sort((a, b) => b.money - a.money);
@@ -414,15 +304,22 @@
                 let isMe = (item.id === "player");
                 let colorStyle = isMe ? "color:#00ff66; font-weight:bold;" : "color:#fff;";
                 let crown = item.isOwner ? "👑 " : "";
-                let status = item.isDead ? " [DEAD]" : "";
                 html += `
                     <div class="player-row" style="${colorStyle}">
-                        <span>${index + 1}. ${crown}${item.name}${status}</span>
-                        <span><b style="color:#00ff66;">Len:${item.score}</b> | <b style="color:#f1c40f;">$${item.money}</b></span>
+                        <span>${index + 1}. ${crown}${item.name}</span>
+                        <span><b style="color:#00ff66;">Kills:${item.kills}</b> | <b style="color:#f1c40f;">$${item.money}</b></span>
                     </div>
                 `;
             });
             document.getElementById("rank-rows").innerHTML = html;
+        }
+
+        function respawnPlayer() {
+            let player = entities.find(e => e.id === "player");
+            player.isDead = false;
+            player.x = 0; player.z = 0;
+            document.getElementById("death-screen").style.display = "none";
+            updateHUDAndLeaderboard();
         }
 
         function onWindowResize() {
